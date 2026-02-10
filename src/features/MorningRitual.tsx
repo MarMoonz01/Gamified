@@ -82,7 +82,7 @@ const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
             title: `[${item.time}] ${item.activity}`,
             completed: false,
             // Map types to game types
-            type: item.type === 'REST' || item.type === 'FOOD' ? 'BOTH' : 'GOLD',
+            type: item.type === 'REST' || item.type === 'FOOD' ? 'HEALTH' : 'GOLD',
             rank: item.type === 'STUDY' || item.type === 'WORK' ? 'A' : 'D',
             goldValue: item.type === 'STUDY' ? 50 : 10,
             xpValue: item.type === 'STUDY' ? 100 : 20
