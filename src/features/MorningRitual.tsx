@@ -21,7 +21,7 @@ interface TimelineItem {
 }
 
 const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
-    const { habits, setTasks, addHeat } = useDragonStore();
+    const { habits, tasks, setTasks, addHeat } = useDragonStore();
     const [step, setStep] = useState<'MOOD' | 'FOCUS' | 'INTENSITY' | 'GENERATING' | 'TIMELINE'>('MOOD');
 
     const [mood, setMood] = useState<Mood>('NEUTRAL');
@@ -88,10 +88,7 @@ const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
             xpValue: item.type === 'STUDY' ? 100 : 20
         }));
 
-        // Add to existing tasks or replace? Let's add to top.
-        // Actually, user might want to clear old dailies? 
-        // For now, let's just prepend.
-        setTasks((prev) => [...newTasks, ...prev]);
+        setTasks([...newTasks, ...tasks]);
 
         addHeat(100, 'SOCIAL'); // Big bonus for accepting strategy
         onClose();
