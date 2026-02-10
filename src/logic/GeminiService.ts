@@ -5,12 +5,11 @@ class GeminiService {
     private model: any = null;
     private apiKey: string = '';
 
-    // Priority order of models to try - Expanded list
+    // Priority order of models to try - Expanded list for 2026
     private readonly MODELS = [
+        "gemini-2.5-flash",
         "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-1.0-pro",
-        "gemini-pro"
+        "gemini-1.5-pro"
     ];
     private currentModelIndex = 0;
 
