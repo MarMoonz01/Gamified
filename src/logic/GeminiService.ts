@@ -5,6 +5,10 @@ class GeminiService {
     private model: any = null;
     private apiKey: string = '';
 
+    // Priority order of models to try
+    private readonly MODELS = ["gemini-1.5-flash", "gemini-pro", "gemini-1.5-pro-latest"];
+    private currentModelIndex = 0;
+
     constructor() {
         this.loadConfig();
     }
@@ -14,8 +18,15 @@ class GeminiService {
         if (key) {
             this.apiKey = key;
             this.genAI = new GoogleGenerativeAI(this.apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            this.updateModel();
         }
+    }
+
+    private updateModel() {
+        if (!this.genAI) return;
+        const modelName = this.MODELS[this.currentModelIndex];
+        console.log(`[Gemini] Using model: ${modelName}`);
+        this.model = this.genAI.getGenerativeModel({ model: modelName });
     }
 
     public getKey(): string {
@@ -26,19 +37,43 @@ class GeminiService {
         this.apiKey = key;
         localStorage.setItem('dragon-gemini-key', key);
         this.genAI = new GoogleGenerativeAI(this.apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        this.currentModelIndex = 0; // Reset to preferred model
+        this.updateModel();
+    }
+
+    private async executeWithFallback<T>(operation: (model: any) => Promise<T>): Promise<T> {
+        if (!this.model) throw new Error("Gemini API Key not set. Please configure it in Settings.");
+
+        // Try current model first
+        try {
+            return await operation(this.model);
+        } catch (error: any) {
+            // Check if error is 404 (Model not found) or 400 (Bad Request - sometimes implies model issue)
+            const isModelError = error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('not supported');
+
+            if (isModelError && this.currentModelIndex < this.MODELS.length - 1) {
+                console.warn(`[Gemini] Model ${this.MODELS[this.currentModelIndex]} failed. Switching to fallback...`);
+                this.currentModelIndex++;
+                this.updateModel();
+                // Retry recursively with new model
+                return this.executeWithFallback(operation);
+            }
+
+            // If not a model error or no more fallbacks, throw original error
+            throw error;
+        }
     }
 
     public async generateContent(prompt: string): Promise<string> {
-        if (!this.model) return "Error: Gemini API Key not set. Please configure it in Settings.";
-
         try {
-            const result = await this.model.generateContent(prompt);
-            const response = await result.response;
-            return response.text();
+            return await this.executeWithFallback(async (model) => {
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                return response.text();
+            });
         } catch (error: any) {
             console.error("Gemini Error:", error);
-            return `Error accessing Gemini: ${error.message}`;
+            return `Error accessing Gemini (${this.MODELS[this.currentModelIndex]}): ${error.message}`;
         }
     }
 
@@ -46,13 +81,14 @@ class GeminiService {
         if (!this.genAI) return null;
 
         try {
-            const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const result = await model.generateContent(prompt + " Response must be valid JSON only. Do not wrap in markdown blocks.");
-            const response = await result.response;
-            const text = response.text();
-            // Clean markdown if present
-            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(jsonStr) as T;
+            return await this.executeWithFallback(async (model) => {
+                const result = await model.generateContent(prompt + " Response must be valid JSON only. Do not wrap in markdown blocks.");
+                const response = await result.response;
+                const text = response.text();
+                // Clean markdown if present
+                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(jsonStr) as T;
+            });
         } catch (error) {
             console.error("Gemini JSON Error:", error);
             return null;
@@ -74,22 +110,22 @@ class GeminiService {
     }
 
     public async generateChat(history: { role: string, parts: string }[], message: string): Promise<string> {
-        if (!this.model) return "Error: Gemini API Key not set.";
-
         try {
-            const chat = this.model.startChat({
-                history: history.map(h => ({
-                    role: h.role,
-                    parts: [{ text: h.parts }]
-                })),
-                generationConfig: {
-                    maxOutputTokens: 1000,
-                },
-            });
+            return await this.executeWithFallback(async (model) => {
+                const chat = model.startChat({
+                    history: history.map(h => ({
+                        role: h.role,
+                        parts: [{ text: h.parts }]
+                    })),
+                    generationConfig: {
+                        maxOutputTokens: 1000,
+                    },
+                });
 
-            const result = await chat.sendMessage(message);
-            const response = await result.response;
-            return response.text();
+                const result = await chat.sendMessage(message);
+                const response = await result.response;
+                return response.text();
+            });
         } catch (error: any) {
             console.error("Gemini Chat Error:", error);
             return `Error: ${error.message}`;
