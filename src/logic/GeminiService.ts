@@ -5,8 +5,13 @@ class GeminiService {
     private model: any = null;
     private apiKey: string = '';
 
-    // Priority order of models to try
-    private readonly MODELS = ["gemini-1.5-flash", "gemini-pro", "gemini-1.5-pro-latest"];
+    // Priority order of models to try - Expanded list
+    private readonly MODELS = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-1.0-pro",
+        "gemini-pro"
+    ];
     private currentModelIndex = 0;
 
     constructor() {
@@ -72,8 +77,11 @@ class GeminiService {
                 return response.text();
             });
         } catch (error: any) {
-            console.error("Gemini Error:", error);
-            return `Error accessing Gemini (${this.MODELS[this.currentModelIndex]}): ${error.message}`;
+            console.error("Gemini Final Error:", error);
+            if (error.message?.includes('404')) {
+                return "Error: Model not found. Please ensure your Google Cloud Project has the 'Generative Language API' enabled.";
+            }
+            return `Error accessing Gemini: ${error.message}`;
         }
     }
 
