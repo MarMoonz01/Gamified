@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+:root {
+  /* --- Ancient Scroll / Paper Palette --- */
+
+  /* Backgrounds */
+  --color-sky-day-top: #E0F7FA;
+  --color-sky-day-bottom: #E1F5FE;
+  /* Keeping Sky for the world, but UI will be paper */
+
+  /* Parchment UI */
+  --color-parchment-bg: #FDF6E3;
+  /* Creamy Paper */
+  --color-parchment-shadow: #D7C4A1;
+  /* Darker paper shadow */
+  --color-ink-primary: #2C1810;
+  /* Dark Brown Ink */
+  --color-ink-secondary: #5D4037;
+  /* Lighter Brown Ink */
+  --color-ink-accent: #8B4513;
+  /* Reddish Brown */
+
+  /* Accents */
+  --color-dragon-gold: #D4AF37;
+  /* Metallic Gold */
+  --color-dragon-fire: #BF360C;
+  --color-dragon-water: #0277BD;
+  --color-dragon-nature: #2E7D32;
+  --color-dragon-arcane: #7B1FA2;
+
+  /* Fonts */
+  --font-medieval: 'MedievalSharp', cursive;
+  --font-body: 'Quicksand', sans-serif;
+}
+
+@theme {
+  --font-fantasy: var(--font-medieval);
+  --font-sans: var(--font-body);
+
+  --color-dragon-gold: var(--color-dragon-gold);
+  --color-dragon-fire: var(--color-dragon-fire);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink-primary);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* --- Scroll / Parchment Utility --- */
+.glass-panel {
+  /* Paper Texture Simulation */
+  background: var(--color-parchment-bg);
+  /* Subtle Grain */
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom right, #FDF6E3, #F5F5DC);
+
+  /* Rough Edges via Border & Shadow */
+  border: 1px solid var(--color-ink-secondary);
+  border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
+  /* Organic shape */
+
+  box-shadow:
+    /* Depth Shadow */
+    2px 5px 15px rgba(0, 0, 0, 0.2),
+    /* Inner "Aged" Tint */
+    inset 0 0 60px rgba(139, 69, 19, 0.1),
+    /* Paper Edge Highlight */
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+
+  position: relative;
+  overflow: hidden;
+  /* To contain inner elements within the rough shape */
+}
+
+/* Old Paper Stain Effect pseudo-element */
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(139, 69, 19, 0.05), transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Optional: Add "Tape" or "Nail" effect later */
+
+.system-header {
+  font-family: var(--font-medieval);
+  @apply font-bold text-amber-900 tracking-wider uppercase border-b-2 border-amber-900/20 pb-2 mb-4 text-xl;
+}
+
+.system-text {
+  @apply font-sans text-amber-950 leading-relaxed;
+}
+
+/* --- Fantasy UI Utilities --- */
+
+/* Custom Cursor: A Stylized Quill/Wand */
+body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 19 7-7 3 3-7 7-3-3z'/%3E%3Cpath d='m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/%3E%3Cpath d='m2 2 7.586 7.586'/%3E%3Ccircle cx='11' cy='11' r='2'/%3E%3C/svg%3E") 0 0, auto;
+}
+
+button:hover,
+a:hover,
+.pointer-events-auto:hover {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%23D4AF37' stroke='%234C1D95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 19 7-7 3 3-7 7-3-3z'/%3E%3Cpath d='m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/%3E%3Cpath d='m2 2 7.586 7.586'/%3E%3Ccircle cx='11' cy='11' r='2'/%3E%3C/svg%3E") 0 0, pointer;
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5), 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.text-stroke-sm {
+  -webkit-text-stroke: 1px #2C1810;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.rpg-panel {
+  @apply bg-[#FDF6E3] border-2 border-[#5D4037];
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background-image: linear-gradient(to bottom right, #FDF6E3, #F5F5DC);
+  position: relative;
+}
+
+.rpg-panel::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px dashed #D7C4A1;
+  pointer-events: none;
+}
+
+/* Resource Bar Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.bar-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
