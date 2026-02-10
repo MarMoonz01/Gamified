@@ -10,11 +10,11 @@ class GeminiService {
     }
 
     public loadConfig() {
-        const key = localStorage.getItem('dragon-gemini-key');
+        const key = localStorage.getItem('dragon-gemini-key') || import.meta.env.VITE_GEMINI_API_KEY;
         if (key) {
             this.apiKey = key;
             this.genAI = new GoogleGenerativeAI(this.apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
         }
     }
 
@@ -26,7 +26,7 @@ class GeminiService {
         this.apiKey = key;
         localStorage.setItem('dragon-gemini-key', key);
         this.genAI = new GoogleGenerativeAI(this.apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
     }
 
     public async generateContent(prompt: string): Promise<string> {

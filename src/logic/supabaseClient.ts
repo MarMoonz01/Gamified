@@ -1,9 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// These will be populated by the user in the new Settings UI
-const SUPABASE_URL = localStorage.getItem('dragon-supabase-url') || '';
-const SUPABASE_KEY = localStorage.getItem('dragon-supabase-key') || '';
+// These will be populated by the user in the new Settings UI OR via Environment Variables (Vercel)
+const SUPABASE_URL = localStorage.getItem('dragon-supabase-url') || import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_KEY = localStorage.getItem('dragon-supabase-key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = (SUPABASE_URL && SUPABASE_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_KEY)

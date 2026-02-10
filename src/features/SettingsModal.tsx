@@ -8,11 +8,11 @@ const SettingsModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     // Cloud Sync State
-    const [url, setUrl] = useState(localStorage.getItem('dragon-supabase-url') || '');
-    const [key, setKey] = useState(localStorage.getItem('dragon-supabase-key') || '');
+    const [url, setUrl] = useState(localStorage.getItem('dragon-supabase-url') || import.meta.env.VITE_SUPABASE_URL || '');
+    const [key, setKey] = useState(localStorage.getItem('dragon-supabase-key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '');
 
     // AI State
-    const [geminiKey, setGeminiKey] = useState(geminiService.getKey());
+    const [geminiKey, setGeminiKey] = useState(geminiService.getKey() || import.meta.env.VITE_GEMINI_API_KEY || '');
 
     const [status, setStatus] = useState<string>('');
 
