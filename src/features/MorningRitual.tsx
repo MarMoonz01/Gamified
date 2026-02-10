@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDragonStore } from '../logic/dragonStore';
 import type { Task } from '../logic/dragonStore';
 import { geminiService } from '../logic/GeminiService';
-import { Sun, Shield, Flame, Battery, BatteryCharging, Zap, Brain, Dumbbell, Palette, CheckCircle } from 'lucide-react';
+import {
+    Sun, Battery, BatteryCharging, Zap, Sparkles,
+    Brain, Dumbbell, Palette, Utensils, Clock, Coffee
+} from 'lucide-react';
 
 interface MorningRitualProps {
     onClose: () => void;
@@ -11,246 +14,229 @@ interface MorningRitualProps {
 
 type Mood = 'TIRED' | 'NEUTRAL' | 'ENERGETIC';
 type Focus = 'STUDY' | 'HEALTH' | 'CREATION';
-type Intensity = 'LOW' | 'MEDIUM' | 'HIGH';
 
-interface TimelineItem {
+// โครงสร้างข้อมูลสำหรับตารางเวลาจาก AI
+interface ScheduleItem {
     time: string;
     activity: string;
-    type: 'GOLD' | 'FOOD' | 'REST' | 'WORK' | 'STUDY';
-    description: string;
+    type: 'MEAL' | 'WORK' | 'REST' | 'ROUTINE';
 }
 
-const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
-    const { habits, tasks, setTasks, addHeat } = useDragonStore();
-    const [step, setStep] = useState<'MOOD' | 'FOCUS' | 'INTENSITY' | 'GENERATING' | 'TIMELINE'>('MOOD');
+const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
+    // ดึง tasks เดิมมาด้วย เพื่อเอามาต่อท้าย (Append) ไม่ให้ของเก่าหาย
+    const { tasks, setTasks, addHeat } = useDragonStore();
 
+    const [step, setStep] = useState<'MOOD' | 'FOCUS' | 'GENERATING' | 'RESULT'>('MOOD');
     const [mood, setMood] = useState<Mood>('NEUTRAL');
     const [focus, setFocus] = useState<Focus>('STUDY');
-    const [intensity, setIntensity] = useState<Intensity>('MEDIUM');
 
-    const [aiResponse, setAiResponse] = useState<{ quote: string, timeline: TimelineItem[] } | null>(null);
+    const [aiResponse, setAiResponse] = useState<{ quote: string, schedule: ScheduleItem[] } | null>(null);
 
-    const generateSchedule = async () => {
+    const generateSchedule = async (selectedFocus: Focus) => {
         setStep('GENERATING');
+        setFocus(selectedFocus);
 
         const prompt = `
-            You are Elder Ignis, a wise dragon strategist.
+            You are Elder Ignis, a wise dragon strategist acting as a personal secretary.
             The user is feeling ${mood}.
-            They want to focus on ${focus}.
-            They want a ${intensity} intensity schedule.
+            Their main goal for today is ${selectedFocus}.
             
-            Current Habits: ${JSON.stringify(habits.map(h => h.title))}
+            Design a "Daily Battle Plan" (Itinerary).
+            Include:
+            1. Wake Up time / Start time.
+            2. Meal suggestions (Breakfast/Lunch/Dinner) fitting the goal.
+            3. Deep Work/Study blocks.
+            4. Rest/Recovery blocks.
+            5. Bedtime.
 
-            Goal: Create a Full Day Timeline (08:00 - 22:00) that balances their focus with their mood.
-            
-            Instructions:
-            1. Create a timeline of activity blocks.
-            2. Include specifically:
-               - "Dragon Breakfast" & "Dragon Dinner" (Suggest specific meals based on ${focus} goal).
-               - "Deep Work" / "Study" blocks depending on focus.
-               - "Rest" / "Recovery" blocks if mood is TIRED.
-            3. Each item needs a time (HH:MM), title, type (GOLD, FOOD, REST, WORK, STUDY), and short description.
-            4. Provide a wise quote at the end.
-
-            Return JSON ONLY:
+            Return JSON only:
             {
-                "timeline": [
-                    { "time": "08:00", "activity": "Dragon Breakfast: Oatmeal & Berries", "type": "FOOD", "description": "Fuel for the mind." },
-                    { "time": "09:00", "activity": "Deep Study: IELTS Reading", "type": "STUDY", "description": "Focus on comprehension." }
+                "schedule": [
+                    { "time": "08:00", "activity": "Dragon Breakfast", "type": "MEAL" },
+                    { "time": "09:00", "activity": "Deep Work: Coding", "type": "WORK" },
+                    { "time": "23:00", "activity": "Sleep", "type": "REST" }
                 ],
-                "quote": "Fire burns brightest when controlled."
+                "quote": "A fiery motivational quote."
             }
         `;
 
-        const result = await geminiService.generateJSON<{ timeline: TimelineItem[], quote: string }>(prompt);
-
-        if (result && result.timeline) {
-            setAiResponse(result);
-            setStep('TIMELINE');
-            addHeat(20, 'SOCIAL');
-        } else {
+        try {
+            const result = await geminiService.generateJSON<{ schedule: ScheduleItem[], quote: string }>(prompt);
+            if (result) {
+                setAiResponse(result);
+                setStep('RESULT');
+            } else {
+                setStep('MOOD');
+                alert("Elder Ignis is silent... (Check API Key)");
+            }
+        } catch (error) {
+            console.error(error);
             setStep('MOOD');
-            alert("Elder Ignis is meditating... try again.");
         }
     };
 
-    const handleAccept = () => {
+    const acceptSchedule = () => {
         if (!aiResponse) return;
 
-        const newTasks: Task[] = aiResponse.timeline.map((item, index) => ({
-            id: `strat-${Date.now()}-${index}`,
-            title: `[${item.time}] ${item.activity}`,
-            completed: false,
-            // Map types to game types
-            type: item.type === 'REST' || item.type === 'FOOD' ? 'HEALTH' : 'GOLD',
-            rank: item.type === 'STUDY' || item.type === 'WORK' ? 'A' : 'D',
-            goldValue: item.type === 'STUDY' ? 50 : 10,
-            xpValue: item.type === 'STUDY' ? 100 : 20
-        }));
+        // แปลง Schedule เป็น Task ที่ถูกต้องตาม Type ใน DragonStore
+        const newTasks: Task[] = aiResponse.schedule.map((item, index) => {
+            let type: Task['type'] = 'GOLD'; // Default
+            let rank: Task['rank'] = 'D';
 
-        setTasks([...newTasks, ...tasks]);
+            // Mapping Logic ให้ตรงกับ Store Type ('HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD')
+            switch (item.type) {
+                case 'MEAL':
+                case 'REST':
+                    type = 'HEALTH';
+                    rank = 'E';
+                    break;
+                case 'WORK':
+                    // ถ้า Focus เป็น STUDY ให้ type เป็น STUDY, ถ้าไม่ใช่ให้เป็น GOLD
+                    type = focus === 'STUDY' ? 'STUDY' : 'GOLD';
+                    rank = 'S';
+                    break;
+                case 'ROUTINE':
+                    type = 'GOLD';
+                    rank = 'D';
+                    break;
+            }
 
-        addHeat(100, 'SOCIAL'); // Big bonus for accepting strategy
+            return {
+                id: `sched-${Date.now()}-${index}`,
+                title: `[${item.time}] ${item.activity}`,
+                completed: false,
+                type: type,
+                rank: rank,
+                description: "Elder Ignis Plan"
+            };
+        });
+
+        // Append ต่อจาก Task เดิม (หรือจะใช้ newTasks เลยถ้าอยากล้างของเก่า ให้แก้เป็น setTasks(newTasks))
+        setTasks([...tasks, ...newTasks]);
+
+        addHeat(100, 'SOCIAL'); // Bonus แต้ม Social เพราะคุยกับ Ignis
         onClose();
-        alert("Strategy Adopted! Your tasks have been updated.");
+    };
+
+    // Helper เลือกไอคอน
+    const getIcon = (type: string) => {
+        switch (type) {
+            case 'MEAL': return <Utensils size={16} className="text-orange-500" />;
+            case 'WORK': return <Sparkles size={16} className="text-amber-500" />;
+            case 'REST': return <Coffee size={16} className="text-blue-500" />;
+            default: return <Clock size={16} className="text-slate-500" />;
+        }
     };
 
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         >
             <motion.div
                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
-                className="bg-[#1a120b] w-full max-w-2xl rounded-xl shadow-2xl border-2 border-[#D4AF37] overflow-hidden flex flex-col max-h-[90vh] relative"
+                className="bg-[#FDF6E3] w-full max-w-lg rounded-xl shadow-2xl border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[90vh]"
             >
                 {/* Header */}
-                <div className="bg-[#2C1810] p-6 flex justify-between items-center border-b border-[#D4AF37]/30">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-red-600 border-2 border-[#D4AF37] flex items-center justify-center shadow-lg shadow-amber-500/20">
-                            <Brain className="text-[#2C1810]" size={24} />
+                <div className="bg-[#2C1810] p-4 flex justify-between items-center bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-500 border-2 border-[#D4AF37] flex items-center justify-center">
+                            <Sun className="text-[#2C1810]" />
                         </div>
                         <div>
-                            <h2 className="font-medieval text-2xl text-[#D4AF37] tracking-wide">Dragon Strategist</h2>
-                            <p className="text-xs text-amber-300/60 uppercase tracking-widest">Daily War Room</p>
+                            <h2 className="font-medieval text-xl text-[#D4AF37]">Daily Strategist</h2>
+                            <p className="text-xs text-amber-300/60 uppercase tracking-widest">Elder Ignis Planning</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-[#D7C4A1] hover:text-white transition-colors">✕</button>
+                    <button onClick={onClose} className="text-[#D7C4A1] hover:text-white">✕</button>
                 </div>
 
                 {/* Content */}
-                <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="p-8 flex-1 overflow-y-auto">
                     <AnimatePresence mode="wait">
                         {step === 'MOOD' && (
-                            <motion.div key="mood" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-8">
-                                <h3 className="text-3xl font-medieval text-[#E8D4B0] text-center">State of Mind</h3>
+                            <motion.div key="mood" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                                <h3 className="text-2xl font-medieval text-[#2C1810] text-center">Energy Check</h3>
                                 <div className="grid grid-cols-1 gap-4">
-                                    {[
-                                        { id: 'TIRED', label: 'Exhausted', icon: Battery, color: 'text-slate-400', bg: 'bg-slate-900/50', border: 'border-slate-700' },
-                                        { id: 'NEUTRAL', label: 'Balanced', icon: BatteryCharging, color: 'text-blue-400', bg: 'bg-blue-900/30', border: 'border-blue-700' },
-                                        { id: 'ENERGETIC', label: 'Ready for War', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-900/30', border: 'border-amber-700' }
-                                    ].map((item) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => { setMood(item.id as Mood); setStep('FOCUS'); }}
-                                            className={`p-6 border ${item.border} rounded-lg ${item.bg} hover:brightness-125 flex items-center gap-6 transition-all group`}
-                                        >
-                                            <item.icon size={32} className={`${item.color}`} />
-                                            <span className="font-bold text-xl text-[#E8D4B0]">{item.label}</span>
-                                        </button>
-                                    ))}
+                                    <button onClick={() => { setMood('TIRED'); setStep('FOCUS'); }} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
+                                        <div className="p-3 bg-slate-200 rounded-full"><Battery size={24} className="text-slate-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Low Battery (Recovery Mode)</span>
+                                    </button>
+                                    <button onClick={() => { setMood('NEUTRAL'); setStep('FOCUS'); }} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
+                                        <div className="p-3 bg-blue-100 rounded-full"><BatteryCharging size={24} className="text-blue-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Balanced (Normal Day)</span>
+                                    </button>
+                                    <button onClick={() => { setMood('ENERGETIC'); setStep('FOCUS'); }} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
+                                        <div className="p-3 bg-amber-100 rounded-full"><Zap size={24} className="text-amber-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Full Power (War Mode)</span>
+                                    </button>
                                 </div>
                             </motion.div>
                         )}
 
                         {step === 'FOCUS' && (
-                            <motion.div key="focus" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-8">
-                                <h3 className="text-3xl font-medieval text-[#E8D4B0] text-center">Primary Objective</h3>
+                            <motion.div key="focus" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                                <h3 className="text-2xl font-medieval text-[#2C1810] text-center">Today's Mission?</h3>
                                 <div className="grid grid-cols-1 gap-4">
-                                    {[
-                                        { id: 'STUDY', label: 'Wisdom (IELTS/Study)', icon: Brain, color: 'text-blue-400', desc: 'Focus on mental expansion.' },
-                                        { id: 'HEALTH', label: 'Vitality (Health)', icon: Dumbbell, color: 'text-red-400', desc: 'Strengthen the vessel.' },
-                                        { id: 'CREATION', label: 'Creation (Work/Art)', icon: Palette, color: 'text-purple-400', desc: 'Manifest your vision.' }
-                                    ].map((item) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => { setFocus(item.id as Focus); setStep('INTENSITY'); }}
-                                            className="p-6 border border-[#D7C4A1]/30 rounded-lg bg-[#2C1810]/40 hover:bg-[#2C1810]/70 flex items-center gap-6 transition-all group text-left"
-                                        >
-                                            <div className={`p-4 rounded-full bg-black/30 ${item.color}`}>
-                                                <item.icon size={32} />
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-xl text-[#E8D4B0]">{item.label}</div>
-                                                <div className="text-sm text-[#8B4513]">{item.desc}</div>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {step === 'INTENSITY' && (
-                            <motion.div key="intensity" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-8">
-                                <h3 className="text-3xl font-medieval text-[#E8D4B0] text-center">Engagement Level</h3>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {[
-                                        { id: 'LOW', label: 'Tactical Retreat', icon: Shield, color: 'text-green-400', desc: 'Light load, prioritize recovery.' },
-                                        { id: 'MEDIUM', label: 'Standard Maneuvers', icon: Flame, color: 'text-orange-400', desc: 'Balanced progress.' },
-                                        { id: 'HIGH', label: 'All-Out Assault', icon: Sun, color: 'text-red-500', desc: 'Maximum effort, no excuses.' }
-                                    ].map((item) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => { setIntensity(item.id as Intensity); generateSchedule(); }}
-                                            className="p-6 border border-[#D7C4A1]/30 rounded-lg bg-[#2C1810]/40 hover:bg-[#2C1810]/70 flex items-center gap-6 transition-all group text-left"
-                                        >
-                                            <item.icon size={32} className={`${item.color}`} />
-                                            <div>
-                                                <div className="font-bold text-xl text-[#E8D4B0]">{item.label}</div>
-                                                <div className="text-sm text-[#8B4513]">{item.desc}</div>
-                                            </div>
-                                        </button>
-                                    ))}
+                                    <button onClick={() => generateSchedule('STUDY')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-blue-50 flex items-center gap-4 transition-all">
+                                        <div className="p-3 bg-blue-100 rounded-full"><Brain size={24} className="text-blue-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Wisdom (IELTS / Study)</span>
+                                    </button>
+                                    <button onClick={() => generateSchedule('HEALTH')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-red-50 flex items-center gap-4 transition-all">
+                                        <div className="p-3 bg-red-100 rounded-full"><Dumbbell size={24} className="text-red-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Vitality (Exercise / Health)</span>
+                                    </button>
+                                    <button onClick={() => generateSchedule('CREATION')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-purple-50 flex items-center gap-4 transition-all">
+                                        <div className="p-3 bg-purple-100 rounded-full"><Palette size={24} className="text-purple-600" /></div>
+                                        <span className="font-bold text-[#5D4037]">Creation (Code / Project)</span>
+                                    </button>
                                 </div>
                             </motion.div>
                         )}
 
                         {step === 'GENERATING' && (
-                            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-64 text-center space-y-6">
-                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}>
-                                    <div className="w-20 h-20 rounded-full border-4 border-t-[#D4AF37] border-r-[#D4AF37]/50 border-b-[#D4AF37]/20 border-l-transparent"></div>
+                            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-64 text-center space-y-4">
+                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+                                    <Sparkles size={48} className="text-[#D4AF37]" />
                                 </motion.div>
-                                <div>
-                                    <h3 className="text-2xl font-medieval text-[#D4AF37]">Consulting the War Council...</h3>
-                                    <p className="text-[#8B4513] mt-2">Forging your daily destiny.</p>
-                                </div>
+                                <h3 className="text-xl font-medieval text-[#2C1810]">Elder Ignis is strategizing...</h3>
                             </motion.div>
                         )}
 
-                        {step === 'TIMELINE' && aiResponse && (
-                            <motion.div key="timeline" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
-                                <div className="bg-[#2C1810]/20 p-4 rounded-lg border border-[#D4AF37]/30 italic text-center font-serif text-[#E8D4B0] text-lg">
+                        {step === 'RESULT' && aiResponse && (
+                            <motion.div key="result" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
+                                <div className="bg-[#2C1810]/5 p-4 rounded-lg border border-[#D7C4A1] italic text-center font-serif text-[#5D4037] text-sm">
                                     "{aiResponse.quote}"
                                 </div>
 
-                                <div className="space-y-3 relative before:absolute before:left-4 before:top-0 before:bottom-0 before:w-0.5 before:bg-[#D4AF37]/20">
-                                    {aiResponse.timeline.map((item, idx) => (
-                                        <motion.div
-                                            key={idx}
-                                            initial={{ x: -20, opacity: 0 }}
-                                            animate={{ x: 0, opacity: 1 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                            className="relative pl-10"
-                                        >
-                                            <div className="absolute left-2.5 top-3 w-3 h-3 rounded-full bg-[#D4AF37] shadow-[0_0_10px_#D4AF37]"></div>
-                                            <div className="bg-[#1a120b] border border-[#D7C4A1]/20 p-4 rounded hover:border-[#D4AF37]/60 transition-colors">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <span className="font-mono text-[#D4AF37] font-bold">{item.time}</span>
-                                                    <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${item.type === 'GOLD' ? 'border-amber-500 text-amber-500' :
-                                                        item.type === 'FOOD' ? 'border-green-500 text-green-500' :
-                                                            item.type === 'REST' ? 'border-blue-500 text-blue-500' :
-                                                                'border-purple-500 text-purple-500'
-                                                        }`}>{item.type}</span>
+                                <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="relative border-l-2 border-[#D4AF37] ml-4 space-y-6 py-2">
+                                        {aiResponse.schedule.map((item, idx) => (
+                                            <div key={idx} className="relative pl-6">
+                                                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#FDF6E3] border-2 border-[#D4AF37] flex items-center justify-center">
+                                                    <div className="w-2 h-2 rounded-full bg-[#2C1810]"></div>
                                                 </div>
-                                                <div className="font-bold text-[#E8D4B0] text-lg">{item.activity}</div>
-                                                <p className="text-sm text-[#8B4513]">{item.description}</p>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-[#D4AF37] bg-[#2C1810] px-2 py-0.5 rounded w-fit mb-1">
+                                                        {item.time}
+                                                    </span>
+                                                    <div className="flex items-start gap-2">
+                                                        <div className="mt-1">{getIcon(item.type)}</div>
+                                                        <span className="text-sm font-semibold text-[#5D4037]">{item.activity}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </motion.div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <div className="pt-4 flex gap-4">
-                                    <button
-                                        onClick={() => setStep('MOOD')}
-                                        className="flex-1 py-3 border border-[#D7C4A1]/30 text-[#8B4513] rounded hover:bg-[#2C1810]/20 font-medieval font-bold"
-                                    >
-                                        Restart
+                                <div className="flex gap-2 pt-4">
+                                    <button onClick={() => setStep('FOCUS')} className="flex-1 py-3 border-2 border-[#2C1810] text-[#2C1810] font-medieval rounded-lg hover:bg-amber-50 transition">
+                                        Retry
                                     </button>
-                                    <button
-                                        onClick={handleAccept}
-                                        className="flex-[2] py-3 bg-[#D4AF37] text-[#2C1810] rounded shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] hover:scale-[1.02] transition-all font-medieval font-bold text-xl flex items-center justify-center gap-2"
-                                    >
-                                        <CheckCircle size={20} /> Accept Battle Plan
+                                    <button onClick={acceptSchedule} className="flex-[2] py-3 bg-[#2C1810] text-[#D4AF37] font-medieval rounded-lg hover:bg-black transition shadow-lg flex items-center justify-center gap-2">
+                                        <Sparkles size={18} />
+                                        Commit Plan
                                     </button>
                                 </div>
                             </motion.div>
@@ -262,4 +248,4 @@ const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
     );
 };
 
-export default DragonStrategist;
+export default MorningRitual;
