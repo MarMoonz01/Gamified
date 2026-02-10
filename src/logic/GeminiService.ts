@@ -14,7 +14,7 @@ class GeminiService {
         if (key) {
             this.apiKey = key;
             this.genAI = new GoogleGenerativeAI(this.apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+            this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         }
     }
 
@@ -26,7 +26,7 @@ class GeminiService {
         this.apiKey = key;
         localStorage.setItem('dragon-gemini-key', key);
         this.genAI = new GoogleGenerativeAI(this.apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     }
 
     public async generateContent(prompt: string): Promise<string> {
@@ -46,7 +46,7 @@ class GeminiService {
         if (!this.genAI) return null;
 
         try {
-            const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+            const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const result = await model.generateContent(prompt + " Response must be valid JSON only. Do not wrap in markdown blocks.");
             const response = await result.response;
             const text = response.text();
