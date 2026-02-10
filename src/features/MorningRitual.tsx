@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDragonStore } from '../logic/dragonStore';
 import type { Task } from '../logic/dragonStore';
 import { geminiService } from '../logic/GeminiService';
-import { Sun, Shield, Flame, Battery, BatteryCharging, Zap, Brain, Dumbbell, Palette, CheckCircle, Clock, Coffee, Moon } from 'lucide-react';
+import { Sun, Shield, Flame, Battery, BatteryCharging, Zap, Brain, Dumbbell, Palette, CheckCircle } from 'lucide-react';
 
 interface MorningRitualProps {
     onClose: () => void;
@@ -230,9 +230,9 @@ const DragonStrategist: React.FC<MorningRitualProps> = ({ onClose }) => {
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="font-mono text-[#D4AF37] font-bold">{item.time}</span>
                                                     <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${item.type === 'GOLD' ? 'border-amber-500 text-amber-500' :
-                                                            item.type === 'FOOD' ? 'border-green-500 text-green-500' :
-                                                                item.type === 'REST' ? 'border-blue-500 text-blue-500' :
-                                                                    'border-purple-500 text-purple-500'
+                                                        item.type === 'FOOD' ? 'border-green-500 text-green-500' :
+                                                            item.type === 'REST' ? 'border-blue-500 text-blue-500' :
+                                                                'border-purple-500 text-purple-500'
                                                         }`}>{item.type}</span>
                                                 </div>
                                                 <div className="font-bold text-[#E8D4B0] text-lg">{item.activity}</div>
