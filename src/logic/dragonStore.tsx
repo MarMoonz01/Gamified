@@ -464,18 +464,16 @@ export const useDragonStore = create<DragonState>()(
             })),
 
             triggerHabit: (id, direction = 'UP') => {
-                set(state => {
-                    const habit = state.habits.find(h => h.id === id);
-                    if (!habit) return state;
+                const state = get();
+                const habit = state.habits.find(h => h.id === id);
+                if (!habit) return;
 
-                    if (habit.type !== 'BOTH') get().addHeat(10, habit.type);
+                if (habit.type !== 'BOTH') get().addHeat(10, habit.type);
 
-                    return {
-                        ...state,
-                        essence: state.essence + 5,
-                        habits: state.habits.map(h => h.id === id ? { ...h, streak: h.streak + 1, value: h.value + (direction === 'UP' ? 1 : -1) } : h)
-                    };
-                });
+                set(curr => ({
+                    essence: curr.essence + 5,
+                    habits: curr.habits.map(h => h.id === id ? { ...h, streak: h.streak + 1, value: h.value + (direction === 'UP' ? 1 : -1) } : h)
+                }));
             },
 
             deleteHabit: (id) => set(state => ({
@@ -505,26 +503,21 @@ export const useDragonStore = create<DragonState>()(
             },
 
             toggleTask: (id) => {
-                set(state => {
-                    const task = state.tasks.find(t => t.id === id);
-                    if (!task) return state;
+                const state = get();
+                const task = state.tasks.find(t => t.id === id);
+                if (!task) return;
 
-                    // If completing, give rewards
-                    if (!task.completed) {
-                        get().addHeat(50, task.type); // +50 Heat
-                        return {
-                            ...state,
-                            gold: state.gold + 20, // +20 Gold
-                            tasks: state.tasks.map(t => t.id === id ? { ...t, completed: true } : t)
-                        };
-                    } else {
-                        // Unchecking (Development only usually, but allowed)
-                        return {
-                            ...state,
-                            tasks: state.tasks.map(t => t.id === id ? { ...t, completed: false } : t)
-                        };
-                    }
-                });
+                if (!task.completed) {
+                    get().addHeat(50, task.type);
+                    set(curr => ({
+                        gold: curr.gold + 20,
+                        tasks: curr.tasks.map(t => t.id === id ? { ...t, completed: true } : t)
+                    }));
+                } else {
+                    set(curr => ({
+                        tasks: curr.tasks.map(t => t.id === id ? { ...t, completed: false } : t)
+                    }));
+                }
             },
 
             deleteTask: (id) => set(state => ({
@@ -679,24 +672,26 @@ export const useDragonStore = create<DragonState>()(
             addDaily: (title, type = 'GOLD') => set(state => ({
                 dailies: [...state.dailies, { id: uuidv4(), title, completed: false, streak: 0, type }]
             })),
-            toggleDaily: (id) => set(state => {
+            toggleDaily: (id) => {
+                const state = get();
                 const daily = state.dailies.find(d => d.id === id);
-                if (!daily) return state;
+                if (!daily) return;
 
                 if (!daily.completed) {
                     get().gainXp(10);
                     get().restoreMp(10);
                     get().addHeat(20, daily.type);
-                    return {
-                        dailies: state.dailies.map(d => d.id === id ? { ...d, completed: true, streak: d.streak + 1 } : d),
-                        gold: state.gold + 10
-                    };
+
+                    set(curr => ({
+                        dailies: curr.dailies.map(d => d.id === id ? { ...d, completed: true, streak: d.streak + 1 } : d),
+                        gold: curr.gold + 10
+                    }));
                 } else {
-                    return {
-                        dailies: state.dailies.map(d => d.id === id ? { ...d, completed: false, streak: Math.max(0, d.streak - 1) } : d)
-                    };
+                    set(curr => ({
+                        dailies: curr.dailies.map(d => d.id === id ? { ...d, completed: false, streak: Math.max(0, d.streak - 1) } : d)
+                    }));
                 }
-            }),
+            },
             deleteDaily: (id) => set(state => ({
                 dailies: state.dailies.filter(d => d.id !== id)
             })),
