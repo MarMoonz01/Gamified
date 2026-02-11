@@ -135,6 +135,8 @@ interface DragonState {
 
     // Entities
     dragons: Dragon[];
+    activeDragonId: string | null;
+    setActiveDragon: (id: string) => void;
     activeEgg: Egg | null;
     habits: Habit[];
     tasks: Task[]; // Now treated as "Dungeons" / Todos
@@ -228,9 +230,16 @@ export interface VocabWord {
 export const useDragonStore = create<DragonState>()(
     persist(
         (set, get) => ({
+            // Dragon Management
+            dragons: [],
+            activeDragonId: null, // Track currently selected dragon
+            eggs: [],
+            activeEgg: null,
+
             // Resources
             essence: 50,
             gold: 100,
+            summonCharge: 0,
 
             // Player Profile
             playerName: "Dragon Keeper",
@@ -269,11 +278,9 @@ export const useDragonStore = create<DragonState>()(
             }),
 
             // Entities
-            dragons: [],
-            vocabList: [], // Init empty
+            vocabList: [],
             dragonInk: 0,
             collectedCards: [],
-            summonCharge: 0,
 
             userProfile: null,
             dailyHistory: [],
@@ -286,17 +293,6 @@ export const useDragonStore = create<DragonState>()(
                 dailyHistory: [...prev.dailyHistory.filter(d => d.date !== summary.date), summary]
             })),
 
-            activeEgg: {
-                id: 'initial-egg',
-                rarity: 'COMMON',
-                heat: 0,
-                requiredHeat: 500,
-                isReadyToHatch: false,
-                history: {
-                    study: 0, health: 0, social: 0, gold: 0,
-                    reading: 0, listening: 0, writing: 0, speaking: 0
-                }
-            },
             habits: [
                 { id: 'h1', title: 'Drink Water', streak: 0, value: 0, type: 'HEALTH' },
                 { id: 'h2', title: 'Read 1 Page', streak: 0, value: 0, type: 'STUDY' }
@@ -428,6 +424,8 @@ export const useDragonStore = create<DragonState>()(
                     };
                 });
             },
+
+            setActiveDragon: (id) => set({ activeDragonId: id }),
 
             feedDragon: (dragonId, amount) => {
                 set(state => {

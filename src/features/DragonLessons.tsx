@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { geminiService } from '../logic/GeminiService';
 import { useDragonStore } from '../logic/dragonStore'; // Import DragonStore
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Scroll, CheckCircle, Brain, RefreshCw, Feather, Lock, Flame } from 'lucide-react';
+import { BookOpen, Scroll, CheckCircle, Brain, RefreshCw, Feather, Lock, Flame, Volume2, Mic } from 'lucide-react';
 import { useSound } from '../logic/soundStore';
 import DragonEncounter from './DragonEncounter';
 
@@ -58,6 +58,69 @@ const DragonLessons: React.FC = () => {
     // const [quizAnswers, setQuizAnswers] = useState<string[]>([]); // Removed unused
     const [error, setError] = useState('');
     const [showEncounter, setShowEncounter] = useState(false);
+
+    // Audio State
+    const [listening, setListening] = useState<number | null>(null); // Index of item being listened to
+    const [pronunciationScores, setPronunciationScores] = useState<Record<number, number>>({});
+
+    // TTS
+    const speakWord = (text: string) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    };
+
+    // STT (Pronunciation Check)
+    const checkPronunciation = (targetWord: string, index: number) => {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Speech recognition not supported in this browser.");
+            return;
+        }
+
+        const SpeechRecognition = (window as any).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        setListening(index);
+
+        recognition.onresult = (event: any) => {
+            const spoken = event.results[0][0].transcript.toLowerCase();
+            const target = targetWord.toLowerCase();
+
+            // Simple accuracy check
+            let score = 0;
+            if (spoken === target) score = 100;
+            else if (spoken.includes(target) || target.includes(spoken)) score = 80;
+            else {
+                // Very basic Levenshtein-like check (just matching chars for now to keep it light)
+                let matchCount = 0;
+                for (let i = 0; i < Math.min(spoken.length, target.length); i++) {
+                    if (spoken[i] === target[i]) matchCount++;
+                }
+                score = Math.floor((matchCount / Math.max(spoken.length, target.length)) * 100);
+            }
+
+            setPronunciationScores(prev => ({ ...prev, [index]: score }));
+            setListening(null);
+
+            if (score >= 80) playSound('SUCCESS');
+            else playSound('CLICK'); // Neutral sound
+        };
+
+        recognition.onerror = () => {
+            setListening(null);
+            alert("Could not hear you. Try again.");
+        };
+
+        recognition.onend = () => {
+            setListening(null);
+        };
+
+        recognition.start();
+    };
 
     // Calculate Rarity based on Max Streak
     const calculateRarity = () => {
@@ -320,6 +383,28 @@ const DragonLessons: React.FC = () => {
                                                 </div>
                                                 <h3 className="text-2xl font-bold text-[#2C1810] font-serif mb-2">{item.word}</h3>
                                                 <p className="text-[#5D4037] italic mb-4 border-b border-[#D7C4A1]/50 pb-2">{item.definition}</p>
+
+                                                <div className="flex gap-2 mb-4">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); speakWord(item.word); }}
+                                                        className="p-2 bg-[#FDF6E3] hover:bg-[#D4AF37] hover:text-[#2C1810] rounded-full border border-[#D7C4A1] transition-colors"
+                                                        title="Listen"
+                                                    >
+                                                        <Volume2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); checkPronunciation(item.word, idx); }}
+                                                        className={`p-2 rounded-full border border-[#D7C4A1] transition-colors flex items-center gap-1 ${listening === idx ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-[#FDF6E3] hover:bg-[#D4AF37] hover:text-[#2C1810]'}`}
+                                                        title="Practice Pronunciation"
+                                                    >
+                                                        <Mic size={16} />
+                                                        {pronunciationScores[idx] !== undefined && (
+                                                            <span className={`text-xs font-bold ${pronunciationScores[idx] >= 80 ? 'text-green-600' : 'text-amber-600'}`}>
+                                                                {pronunciationScores[idx]}%
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                </div>
 
                                                 <div className="mb-4">
                                                     <span className="text-xs font-bold uppercase text-[#8B4513]">Synonyms:</span>
