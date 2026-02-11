@@ -24,7 +24,7 @@ interface ScheduleItem {
 
 const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     // ดึง tasks เดิมมาด้วย เพื่อเอามาต่อท้าย (Append) ไม่ให้ของเก่าหาย
-    const { addHeat, addHabit, addTask } = useDragonStore();
+    const { addHabit, addTask } = useDragonStore();
 
     const [step, setStep] = useState<'MOOD' | 'GENERATING' | 'RESULT'>('MOOD');
 
