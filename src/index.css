@@ -1,159 +1,122 @@
 @import "tailwindcss";
 
 :root {
-  /* --- Ancient Scroll / Paper Palette --- */
+  /* --- Cozy / Lofi Green Palette --- */
 
   /* Backgrounds */
-  --color-sky-day-top: #E0F7FA;
-  --color-sky-day-bottom: #E1F5FE;
-  /* Keeping Sky for the world, but UI will be paper */
+  --bg-app: #F7F9F6;
+  /* Softest Mint/White - Notion-like bg */
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #FFFFFF;
 
-  /* Parchment UI */
-  --color-parchment-bg: #FDF6E3;
-  /* Creamy Paper */
-  --color-parchment-shadow: #D7C4A1;
-  /* Darker paper shadow */
-  --color-ink-primary: #2C1810;
-  /* Dark Brown Ink */
-  --color-ink-secondary: #5D4037;
-  /* Lighter Brown Ink */
-  --color-ink-accent: #8B4513;
-  /* Reddish Brown */
+  /* Text */
+  --text-primary: #354F52;
+  /* Dark Green-Slate */
+  --text-secondary: #52796F;
+  /* Sage Green */
+  --text-muted: #84A98C;
+  /* Light Sage */
 
   /* Accents */
-  --color-dragon-gold: #D4AF37;
-  /* Metallic Gold */
-  --color-dragon-fire: #BF360C;
-  --color-dragon-water: #0277BD;
-  --color-dragon-nature: #2E7D32;
-  --color-dragon-arcane: #7B1FA2;
+  --color-primary: #52796F;
+  /* Deep Sage */
+  --color-secondary: #84A98C;
+  /* Pastel Sage */
+  --color-success: #A3B18A;
+  /* Olive Green */
+  --color-warning: #E9C46A;
+  /* Soft Gold */
+  --color-danger: #D4A373;
+  /* Soft Terracotta (instead of harsh red) */
 
   /* Fonts */
-  --font-medieval: 'MedievalSharp', cursive;
-  --font-body: 'Quicksand', sans-serif;
+  --font-sans: 'Quicksand', 'Nunito', 'Segoe UI Rounded', system-ui, sans-serif;
 }
 
 @theme {
-  --font-fantasy: var(--font-medieval);
-  --font-sans: var(--font-body);
-
-  --color-dragon-gold: var(--color-dragon-gold);
-  --color-dragon-fire: var(--color-dragon-fire);
+  --font-sans: var(--font-sans);
+  --color-primary: var(--color-primary);
 }
 
 body {
   margin: 0;
-  font-family: var(--font-body);
-  color: var(--color-ink-primary);
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
   min-height: 100vh;
   overflow: hidden;
+  letter-spacing: 0.02em;
+  /* Slightly wider for "airy" feel */
 }
 
-/* --- Scroll / Parchment Utility --- */
+/* --- Cozy UI Utilities --- */
+
 .glass-panel {
-  /* Paper Texture Simulation */
-  background: var(--color-parchment-bg);
-  /* Subtle Grain */
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E"),
-    linear-gradient(to bottom right, #FDF6E3, #F5F5DC);
-
-  /* Rough Edges via Border & Shadow */
-  border: 1px solid var(--color-ink-secondary);
-  border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
-  /* Organic shape */
-
-  box-shadow:
-    /* Depth Shadow */
-    2px 5px 15px rgba(0, 0, 0, 0.2),
-    /* Inner "Aged" Tint */
-    inset 0 0 60px rgba(139, 69, 19, 0.1),
-    /* Paper Edge Highlight */
-    0 1px 0 rgba(255, 255, 255, 0.5) inset;
-
-  position: relative;
-  overflow: hidden;
-  /* To contain inner elements within the rough shape */
+  background: var(--bg-card);
+  border: 1px solid #E8EFE8;
+  /* Very subtle green-white border */
+  border-radius: 24px;
+  /* Super rounded */
+  box-shadow: 0 4px 20px rgba(82, 121, 111, 0.08);
+  /* Soft Green Shadow */
 }
-
-/* Old Paper Stain Effect pseudo-element */
-.glass-panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 80% 20%, rgba(139, 69, 19, 0.05), transparent 40%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Optional: Add "Tape" or "Nail" effect later */
 
 .system-header {
-  font-family: var(--font-medieval);
-  @apply font-bold text-amber-900 tracking-wider uppercase border-b-2 border-amber-900/20 pb-2 mb-4 text-xl;
+  @apply text-xl font-bold text-[#354F52] mb-4 tracking-tight;
 }
 
 .system-text {
-  @apply font-sans text-amber-950 leading-relaxed;
+  @apply text-[#52796F] leading-relaxed;
 }
 
-/* --- Fantasy UI Utilities --- */
-
-/* Custom Cursor: A Stylized Quill/Wand */
-body {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 19 7-7 3 3-7 7-3-3z'/%3E%3Cpath d='m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/%3E%3Cpath d='m2 2 7.586 7.586'/%3E%3Ccircle cx='11' cy='11' r='2'/%3E%3C/svg%3E") 0 0, auto;
+/* Buttons */
+.btn {
+  @apply px-5 py-2.5 rounded-2xl font-bold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2;
 }
 
-button:hover,
-a:hover,
-.pointer-events-auto:hover {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%23D4AF37' stroke='%234C1D95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 19 7-7 3 3-7 7-3-3z'/%3E%3Cpath d='m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/%3E%3Cpath d='m2 2 7.586 7.586'/%3E%3Ccircle cx='11' cy='11' r='2'/%3E%3C/svg%3E") 0 0, pointer;
+.btn-primary {
+  @apply bg-[#52796F] text-white hover:bg-[#354F52] shadow-sm hover:shadow-md;
 }
 
-.text-glow {
-  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5), 0 0 20px rgba(212, 175, 55, 0.3);
+.btn-ghost {
+  @apply bg-transparent text-[#52796F] hover:bg-[#E8EFE8];
 }
 
-.text-stroke-sm {
-  -webkit-text-stroke: 1px #2C1810;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+/* --- Stats Bar --- */
+.bar-container {
+  @apply h-3 bg-[#E8EFE8] rounded-full overflow-hidden;
 }
 
-.rpg-panel {
-  @apply bg-[#FDF6E3] border-2 border-[#5D4037];
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  background-image: linear-gradient(to bottom right, #FDF6E3, #F5F5DC);
-  position: relative;
+.bar-fill {
+  @apply h-full rounded-full transition-all duration-500;
 }
 
-.rpg-panel::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border: 1px dashed #D7C4A1;
-  pointer-events: none;
+/* Widget Card Utility */
+.widget-card {
+  @apply bg-white rounded-[24px] p-6 border border-[#E8EFE8] shadow-sm hover:shadow-md transition-shadow;
 }
 
-/* Resource Bar Animations */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
+/* --- Scrollbar --- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.bar-shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite linear;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #BCCEC0;
+  /* Light sage scrollbar */
+  border-radius: 99px;
+  border: 2px solid var(--bg-app);
+  /* Padding effect */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #84A98C;
+}
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -162,24 +125,4 @@ a:hover,
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* --- Custom Scrollbar --- */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(44, 24, 16, 0.1);
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #D4AF37;
-  border-radius: 4px;
-  border: 1px solid #5D4037;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #8B4513;
 }

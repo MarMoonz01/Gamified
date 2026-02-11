@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SettingsModal from './features/SettingsModal';
 import Profile from './features/Profile';
 import ChatInterface from './features/ChatInterface';
+import Dashboard from './features/Dashboard';
 
 import { useEffect, useRef } from 'react';
 import { useDragonStore } from './logic/dragonStore';
@@ -64,6 +65,7 @@ function App() {
         <SanctuaryLayout>
           <Routes>
             <Route path="/" element={<Sanctuary />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/hatchery" element={<Hatchery />} />
             <Route path="/codex" element={<Codex />} />
             <Route path="/lessons" element={<DragonLessons />} />

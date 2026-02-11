@@ -12,6 +12,23 @@ export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS';
 import { generateDragonName, generateDragonDNA } from './DragonGenetics';
 import type { DragonDNA } from './DragonGenetics';
 
+export interface UserProfile {
+    name: string;
+    age: number;
+    weight: number; // kg
+    gender: string;
+    goal?: string;
+}
+
+export interface DaySummary {
+    date: string;
+    completed_tasks: number;
+    total_tasks: number;
+    heat_earned: number;
+    mood: string;
+    ai_analysis?: string;
+}
+
 export interface Dragon {
     id: string;
     speciesId?: string;
@@ -112,6 +129,10 @@ interface DragonState {
     dragonInk: number;
     collectedCards: OracleCard[];
 
+    // User Profile & History
+    userProfile: UserProfile | null;
+    dailyHistory: DaySummary[];
+
     // Core Actions
     addHeat: (amount: number, source: string) => void;
     hatchEgg: (name: string, lore: string) => void;
@@ -169,6 +190,10 @@ interface DragonState {
     addDaily: (title: string, type?: Daily['type']) => void;
     toggleDaily: (id: string) => void;
     deleteDaily: (id: string) => void;
+
+    // Profile Actions
+    updateProfile: (profile: Partial<UserProfile>) => void;
+    recordDaySummary: (summary: DaySummary) => void;
 }
 
 export interface OracleCard {
@@ -207,6 +232,17 @@ export const useDragonStore = create<DragonState>()(
             dragonInk: 0,
             collectedCards: [],
             summonCharge: 0,
+
+            userProfile: null,
+            dailyHistory: [],
+
+            updateProfile: (profile) => set(prev => ({
+                userProfile: prev.userProfile ? { ...prev.userProfile, ...profile } : { name: 'Keeper', age: 25, weight: 60, gender: 'Not Specified', ...profile }
+            })),
+
+            recordDaySummary: (summary) => set(prev => ({
+                dailyHistory: [...prev.dailyHistory.filter(d => d.date !== summary.date), summary]
+            })),
 
             hero: {
                 strength: 10, agility: 10, sense: 10, vitality: 10, intelligence: 10,

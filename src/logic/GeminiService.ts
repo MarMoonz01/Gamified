@@ -138,6 +138,28 @@ class GeminiService {
             return `Error: ${error.message}`;
         }
     }
+    async generateDailyAnalysis(profile: any, tasks: any[], habits: any[], totalHeat: number): Promise<{ analysis: string, mood: string } | null> {
+        const prompt = `
+        You are Elder Ignis, a wise dragon mentor. Analyze the Keeper's daily performance.
+        
+        Keeper Profile: ${JSON.stringify(profile)}
+        Detailed Activity:
+        - Completed Tasks: ${tasks.filter(t => t.completed).map((t: any) => t.title).join(', ')}
+        - Pending Tasks: ${tasks.filter(t => !t.completed).map((t: any) => t.title).join(', ')}
+        - Habit Streaks: ${habits.map((h: any) => `${h.title} (${h.streak})`).join(', ')}
+        - Total Heat Generated Today: ${totalHeat}
+
+        Provide a brief, encouraging, but honest summary of their day (max 3 sentences).
+        Also assess their "mood" or "vibe" as a single word (e.g., Productive, Lazy, Balanced, burnout).
+
+        Return JSON only:
+        {
+            "analysis": "Your analysis string here...",
+            "mood": "OneWordMood"
+        }
+        `;
+        return this.generateJSON(prompt);
+    }
 }
 
 export const geminiService = new GeminiService();

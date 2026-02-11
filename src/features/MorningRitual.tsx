@@ -24,13 +24,9 @@ interface ScheduleItem {
 
 const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     // ดึง tasks เดิมมาด้วย เพื่อเอามาต่อท้าย (Append) ไม่ให้ของเก่าหาย
-    const { addHabit, addTask } = useDragonStore();
+    const { addHabit, addTask, userProfile, dailyHistory } = useDragonStore();
 
     const [step, setStep] = useState<'MOOD' | 'GENERATING' | 'RESULT'>('MOOD');
-
-    // Create Ref or just local const in render if needed, but for now we just pass it to generate
-    // removing state mood if not used for persistence
-
     const [aiResponse, setAiResponse] = useState<{ quote: string, schedule: ScheduleItem[] } | null>(null);
 
     const generateSchedule = async (selectedMood: Mood) => {
@@ -39,10 +35,19 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         const now = new Date();
         const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+        // Get recent history (last 3 entries)
+        const recentHistory = dailyHistory.slice(-3);
+
         const prompt = `
             You are Elder Ignis, a wise dragon strategist acting as a personal secretary.
             The current time is ${currentTime}.
             The user is feeling ${selectedMood}.
+            
+            User Profile:
+            ${JSON.stringify(userProfile || { name: 'Keeper', age: 25, weight: 60, gender: 'Not Specified' })}
+
+            Recent Performance (Last 3 Days):
+            ${JSON.stringify(recentHistory)}
             
             Design a "Daily Battle Plan" (Itinerary) for the REST of the day (until sleep).
             
@@ -50,10 +55,14 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
             1. Start the schedule from ${currentTime}.
             2. CREATE A BALANCED MIX of:
                - IELTS Study (Reading/Listening/Writing/Speaking - be specific, e.g., "IELTS Reading Passage 1")
-               - Physical Health (Exercise/Stretching/Walk - adapted to feeling ${selectedMood})
+               - Physical Health (Exercise/Stretching/Walk - adapted to feeling ${selectedMood} and their Weight/Age)
                - Meals & Rest
-            3. If user is TIRED, focus on recovery and light study. 
-            4. If ENERGETIC, push for high-intensity study and workout.
+            3. PERSONALIZATION:
+               - If they are heavier, suggest lower impact cardio if they are tired.
+               - If they had high heat recently (Burnout risk?), suggest more breaks.
+               - If they had low heat recently (Lazy?), push them slightly harder.
+            4. If user is TIRED, focus on recovery and light study. 
+            5. If ENERGETIC, push for high-intensity study and workout.
             
             Return JSON only:
             {
@@ -62,7 +71,7 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
                     { "time": "15:30", "activity": "Light Stretching", "type": "EXERCISE", "details": "Relieve back tension" },
                     { "time": "18:00", "activity": "Dragon Feast (Dinner)", "type": "MEAL" }
                 ],
-                "quote": "A fiery motivational quote tailored to the mood."
+                "quote": "A fiery motivational quote tailored to the mood and their recent performance."
             }
         `;
 
