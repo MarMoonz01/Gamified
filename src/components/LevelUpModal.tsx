@@ -5,7 +5,7 @@ import { ChevronUp, Zap } from 'lucide-react';
 import LevelUpParticles from './effects/LevelUpParticles';
 
 const LevelUpModal: React.FC = () => {
-    const level = useDragonStore(state => state.hero.level);
+    const level = useDragonStore(state => state.level);
     const [show, setShow] = useState(false);
     const [prevLevel, setPrevLevel] = useState(level);
 
@@ -54,26 +54,14 @@ const LevelUpModal: React.FC = () => {
                             LEVEL {level - 1} <span className="text-yellow-500 mx-2">➞</span> LEVEL {level}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6 text-left bg-white/5 p-4 rounded border border-white/10">
-                            <div className="flex items-center gap-2">
-                                <Zap size={16} className="text-blue-400" />
-                                <span className="text-sm text-gray-400 font-mono">MP RESTORED</span>
+                        <div className="bg-white/5 p-4 rounded border border-white/10 mb-6">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                                <Zap size={20} className="text-yellow-400" />
+                                <span className="text-lg text-yellow-100 font-bold">ENERGY RESTORED!</span>
                             </div>
-                            <div className="text-right text-blue-400 font-bold">100%</div>
-
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded bg-red-500/20 border border-red-500/50 flex items-center justify-center text-[10px] text-red-500">+</div>
-                                <span className="text-sm text-gray-400 font-mono">MP CAP</span>
-                            </div>
-                            <div className="text-right text-green-400 font-bold">+10</div>
-
-                            <div className="col-span-2 border-t border-white/10 my-1" />
-
-                            <div className="flex items-center gap-2">
-                                <span className="w-4 h-4 rounded bg-yellow-500/20 border border-yellow-500/50 flex items-center justify-center text-[10px] text-yellow-500">★</span>
-                                <span className="text-sm text-gray-100 font-mono">STAT POINTS</span>
-                            </div>
-                            <div className="text-right text-yellow-400 font-bold text-lg">+3</div>
+                            <p className="text-sm text-gray-400">
+                                Your Physical & Mental limits have increased!
+                            </p>
                         </div>
 
                         <button
@@ -81,7 +69,7 @@ const LevelUpModal: React.FC = () => {
                             className="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-black font-header tracking-widest text-lg transition-colors clip-path-polygon"
                             style={{ clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)" }}
                         >
-                            ACCEPT POWER
+                            AWAKEN
                         </button>
 
                     </motion.div>

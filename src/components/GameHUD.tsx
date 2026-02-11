@@ -6,8 +6,7 @@ import { Menu, X, Map as MapIcon, Home, User, ShoppingBag, LogOut } from 'lucide
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const GameHUD: React.FC = () => {
-    const { hero: stats, gold } = useDragonStore(); // Destructure hero as stats to match existing usage
-    const { level, xp } = stats; // Extract level and xp from stats (hero)
+    const { level, xp, maxXp, health, gold } = useDragonStore();
     const { playSound } = useSound();
     const navigate = useNavigate();
     const location = useLocation();
@@ -37,27 +36,27 @@ const GameHUD: React.FC = () => {
 
                     {/* Bars Container */}
                     <div className="flex flex-col gap-1 w-48">
-                        {/* HP Bar */}
+                        {/* Physical Health Bar */}
                         <div className="h-3 bg-black/50 rounded-full border border-red-900/50 relative overflow-hidden">
                             <motion.div
                                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-900 to-red-600"
                                 initial={{ width: 0 }}
-                                animate={{ width: `${(stats.hp / stats.maxHp) * 100}%` }}
+                                animate={{ width: `${(health.physical / health.maxPhysical) * 100}%` }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-white/80 font-bold tracking-widest">
-                                {stats.hp} / {stats.maxHp} HP
+                                {health.physical} / {health.maxPhysical} ENERGY
                             </div>
                         </div>
 
-                        {/* MP Bar */}
+                        {/* Mental Focus Bar */}
                         <div className="h-3 bg-black/50 rounded-full border border-blue-900/50 relative overflow-hidden">
                             <motion.div
                                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-900 to-blue-600"
                                 initial={{ width: 0 }}
-                                animate={{ width: `${(stats.mp / stats.maxMp) * 100}%` }}
+                                animate={{ width: `${(health.mental / health.maxMental) * 100}%` }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-white/80 font-bold tracking-widest">
-                                {stats.mp} / {stats.maxMp} MP
+                                {health.mental} / {health.maxMental} FOCUS
                             </div>
                         </div>
 
@@ -66,7 +65,7 @@ const GameHUD: React.FC = () => {
                             <motion.div
                                 className="absolute top-0 left-0 h-full bg-fantasy-gold"
                                 initial={{ width: 0 }}
-                                animate={{ width: `${xp}%` }}
+                                animate={{ width: `${(xp / maxXp) * 100}%` }}
                             />
                         </div>
                     </div>

@@ -22,6 +22,8 @@ const SettingsModal: React.FC = () => {
     const [profileName, setProfileName] = useState(userProfile?.name || 'Keeper');
     const [profileAge, setProfileAge] = useState(userProfile?.age || 25);
     const [profileWeight, setProfileWeight] = useState(userProfile?.weight || 60);
+    const [profileHeight, setProfileHeight] = useState(userProfile?.height || 170);
+    const [profileActivity, setProfileActivity] = useState(userProfile?.activityLevel || 'Moderately Active');
     const [profileGender, setProfileGender] = useState(userProfile?.gender || 'Not Specified');
 
     const handleSaveProfile = () => {
@@ -29,6 +31,8 @@ const SettingsModal: React.FC = () => {
             name: profileName,
             age: profileAge,
             weight: profileWeight,
+            height: profileHeight,
+            activityLevel: profileActivity as any,
             gender: profileGender
         });
         setStatus("Profile Updated!");
@@ -205,6 +209,31 @@ const SettingsModal: React.FC = () => {
                                         />
                                     </div>
                                 </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#52796F] uppercase mb-1">Height (cm)</label>
+                                        <input
+                                            className="w-full bg-[#F7F9F6] border border-[#E8EFE8] rounded-xl p-2 text-[#354F52] text-sm focus:border-[#52796F] outline-none"
+                                            type="number"
+                                            value={profileHeight}
+                                            onChange={e => setProfileHeight(Number(e.target.value))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#52796F] uppercase mb-1">Activity</label>
+                                        <select
+                                            className="w-full bg-[#F7F9F6] border border-[#E8EFE8] rounded-xl p-2 text-[#354F52] text-sm focus:border-[#52796F] outline-none"
+                                            value={profileActivity}
+                                            onChange={e => setProfileActivity(e.target.value as any)}
+                                        >
+                                            <option value="Sedentary">Sedentary</option>
+                                            <option value="Lightly Active">Lightly Active</option>
+                                            <option value="Moderately Active">Moderately Active</option>
+                                            <option value="Very Active">Very Active</option>
+                                            <option value="Super Active">Super Active</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={handleSaveProfile}
                                     className="w-full py-2 bg-[#52796F] hover:bg-[#354F52] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm"
@@ -222,9 +251,10 @@ const SettingsModal: React.FC = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence >
         </>
     );
 };
 
 export default SettingsModal;
+```

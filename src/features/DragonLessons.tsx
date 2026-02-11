@@ -29,7 +29,7 @@ interface LessonData {
 
 const DragonLessons: React.FC = () => {
     const { playSound } = useSound();
-    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg } = useDragonStore(); // Unified store usage
+    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg, ielts, updateIELTS } = useDragonStore(); // Unified store usage
 
     const [mode, setMode] = useState<LessonMode>('VOCAB');
     const [loading, setLoading] = useState(false);
@@ -85,8 +85,25 @@ const DragonLessons: React.FC = () => {
     const handleComplete = () => {
         gainXp(50);
         addSummonCharge(20);
+
+        let msg = "Knowledge absorbed! +50 XP, +20% Boss Charge";
+
+        if (mode === 'VOCAB') {
+            updateIELTS({
+                reading: Math.min(9, ielts.reading + 0.1),
+                speaking: Math.min(9, ielts.speaking + 0.1)
+            });
+            msg += "\n+0.1 Reading, +0.1 Speaking";
+        } else {
+            updateIELTS({
+                writing: Math.min(9, ielts.writing + 0.1),
+                reading: Math.min(9, ielts.reading + 0.1)
+            });
+            msg += "\n+0.1 Writing, +0.1 Reading";
+        }
+
         playSound('LEVEL_UP');
-        alert("Knowledge absorbed! +50 XP, +20% Boss Charge");
+        alert(msg);
     };
 
     return (

@@ -11,6 +11,7 @@ import SettingsModal from './features/SettingsModal';
 import Profile from './features/Profile';
 import ChatInterface from './features/ChatInterface';
 import Dashboard from './features/Dashboard';
+import Analysis from './features/Analysis';
 
 import { useEffect, useRef } from 'react';
 import { useDragonStore } from './logic/dragonStore';
@@ -71,6 +72,7 @@ function App() {
             <Route path="/lessons" element={<DragonLessons />} />
             <Route path="/grimoire" element={<Grimoire />} />
             <Route path="/oracle" element={<OracleDeck />} />
+            <Route path="/analysis" element={<Analysis />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/landing" element={<Landing />} />
           </Routes>

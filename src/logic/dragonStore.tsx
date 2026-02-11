@@ -16,6 +16,8 @@ export interface UserProfile {
     name: string;
     age: number;
     weight: number; // kg
+    height: number; // cm
+    activityLevel: 'Sedentary' | 'Lightly Active' | 'Moderately Active' | 'Very Active' | 'Super Active';
     gender: string;
     goal?: string;
 }
@@ -75,20 +77,20 @@ export interface Habit {
     expiresAt?: number;
 }
 
-export interface HeroStats {
-    strength: number;
-    agility: number;
-    sense: number;
-    vitality: number;
-    intelligence: number;
-    hp: number;
-    maxHp: number;
-    mp: number;
-    maxMp: number;
-    level: number;
-    xp: number;
-    rank: Rank;
-    availablePoints: number;
+export interface HealthCondition {
+    physical: number; // 0-100 (Energy)
+    mental: number;   // 0-100 (Focus)
+    sleep: number;    // 0-100 (Rest Quality)
+    maxPhysical: number;
+    maxMental: number;
+}
+
+export interface IELTSProgress {
+    reading: number;   // 0.0 - 9.0
+    listening: number; // 0.0 - 9.0
+    writing: number;   // 0.0 - 9.0
+    speaking: number;  // 0.0 - 9.0
+    overall: number;   // Calculated
 }
 
 export interface Task {
@@ -118,7 +120,18 @@ interface DragonState {
     playerName: string;
     setPlayerName: (name: string) => void;
 
-    hero: HeroStats;
+    // Player Stats
+    level: number;
+    xp: number;
+    maxXp: number;
+
+    // New Health System
+    health: HealthCondition;
+    updateHealth: (change: Partial<HealthCondition>) => void;
+
+    // IELTS Progress
+    ielts: IELTSProgress;
+    updateIELTS: (scores: Partial<IELTSProgress>) => void;
 
     // Entities
     dragons: Dragon[];
@@ -180,11 +193,6 @@ interface DragonState {
 
     // --- Player Stats ---
     gainXp: (amount: number) => void;
-    takeDamage: (amount: number) => void;
-    restoreHp: (amount: number) => void;
-    restoreMp: (amount: number) => void;
-    spendMp: (amount: number) => boolean;
-    allocatePoint: (stat: keyof HeroStats) => void;
 
     // --- Dailies ---
     addDaily: (title: string, type?: Daily['type']) => void;
@@ -226,6 +234,39 @@ export const useDragonStore = create<DragonState>()(
             // Player Profile
             playerName: "Dragon Keeper",
 
+            // Player Stats
+            level: 1,
+            xp: 0,
+            maxXp: 100,
+
+            // Health System
+            health: {
+                physical: 80,
+                mental: 80,
+                sleep: 100,
+                maxPhysical: 100,
+                maxMental: 100
+            },
+            updateHealth: (change) => set(prev => ({
+                health: { ...prev.health, ...change }
+            })),
+
+            // IELTS
+            ielts: {
+                reading: 0.0,
+                listening: 0.0,
+                writing: 0.0,
+                speaking: 0.0,
+                overall: 0.0
+            },
+            updateIELTS: (scores) => set(prev => {
+                const newScores = { ...prev.ielts, ...scores };
+                const overall = ((newScores.reading + newScores.listening + newScores.writing + newScores.speaking) / 4);
+                // Round to nearest 0.5 for IELTS standard
+                const roundedOverall = Math.round(overall * 2) / 2;
+                return { ielts: { ...newScores, overall: roundedOverall } };
+            }),
+
             // Entities
             dragons: [],
             vocabList: [], // Init empty
@@ -237,18 +278,12 @@ export const useDragonStore = create<DragonState>()(
             dailyHistory: [],
 
             updateProfile: (profile) => set(prev => ({
-                userProfile: prev.userProfile ? { ...prev.userProfile, ...profile } : { name: 'Keeper', age: 25, weight: 60, gender: 'Not Specified', ...profile }
+                userProfile: prev.userProfile ? { ...prev.userProfile, ...profile } : { name: 'Keeper', age: 25, weight: 60, height: 170, activityLevel: 'Moderately Active', gender: 'Not Specified', ...profile }
             })),
 
             recordDaySummary: (summary) => set(prev => ({
                 dailyHistory: [...prev.dailyHistory.filter(d => d.date !== summary.date), summary]
             })),
-
-            hero: {
-                strength: 10, agility: 10, sense: 10, vitality: 10, intelligence: 10,
-                hp: 100, maxHp: 100, mp: 50, maxMp: 50,
-                level: 1, xp: 0, rank: 'E', availablePoints: 0
-            },
 
             activeEgg: {
                 id: 'initial-egg',
@@ -506,8 +541,21 @@ export const useDragonStore = create<DragonState>()(
 
                 if (habit.type !== 'BOTH') get().addHeat(10, habit.type);
 
+                // Energy Logic
+                let { physical, mental } = state.health;
+                if (habit.type === 'HEALTH') {
+                    physical = Math.max(0, physical - 5);
+                    mental = Math.min(state.health.maxMental, mental + 2); // Exercise helps focus?
+                } else if (habit.type === 'STUDY') {
+                    mental = Math.max(0, mental - 5);
+                } else if (habit.title.toLowerCase().includes('sleep') || habit.title.toLowerCase().includes('nap')) {
+                    physical = Math.min(state.health.maxPhysical, physical + 20);
+                    mental = Math.min(state.health.maxMental, mental + 20);
+                }
+
                 set(curr => ({
                     essence: curr.essence + 5,
+                    health: { ...curr.health, physical, mental },
                     habits: curr.habits.map(h => h.id === id ? { ...h, streak: h.streak + 1, value: h.value + (direction === 'UP' ? 1 : -1) } : h)
                 }));
             },
@@ -523,7 +571,6 @@ export const useDragonStore = create<DragonState>()(
             lastResetDate: new Date().toISOString().split('T')[0],
 
             resetDailies: () => set(state => ({
-                // Clear scheduled items (those with expiresAt) and reset daily completion
                 tasks: state.tasks.filter(t => !t.expiresAt),
                 habits: state.habits.filter(h => !h.expiresAt),
                 dailies: state.dailies.map(d => ({ ...d, completed: false })),
@@ -544,9 +591,21 @@ export const useDragonStore = create<DragonState>()(
                 if (!task) return;
 
                 if (!task.completed) {
+                    // Cost Check
+                    if (state.health.physical < 5 || state.health.mental < 5) {
+                        // Maybe block? or just allow with penalty? 
+                        // For now allow but floor at 0
+                    }
+
+                    let { physical, mental } = state.health;
+                    if (task.type === 'HEALTH' || task.type === 'GOLD') physical = Math.max(0, physical - 10);
+                    if (task.type === 'STUDY' || task.type === 'SOCIAL') mental = Math.max(0, mental - 10);
+
                     get().addHeat(50, task.type);
+                    get().gainXp(20);
                     set(curr => ({
                         gold: curr.gold + 20,
+                        health: { ...curr.health, physical, mental },
                         tasks: curr.tasks.map(t => t.id === id ? { ...t, completed: true } : t)
                     }));
                 } else {
@@ -655,53 +714,27 @@ export const useDragonStore = create<DragonState>()(
                 return false;
             },
 
-            // --- Hero Stats Logic ---
+            // --- Player Stats Logic ---
             gainXp: (amount) => set(state => {
-                let newXp = state.hero.xp + amount;
-                let newLevel = state.hero.level;
-                let points = state.hero.availablePoints;
-                let maxMp = state.hero.maxMp;
-                let hp = state.hero.hp;
+                let newXp = state.xp + amount;
+                let newLevel = state.level;
+                let max = state.maxXp;
 
-                if (newXp >= 100 * state.hero.level) {
-                    newXp -= 100 * state.hero.level;
+                // Heal on task complete slightly?
+                // For now just XP logic
+
+                if (newXp >= max) {
+                    newXp -= max;
                     newLevel += 1;
-                    points += 3;
-                    maxMp += 10;
-                    hp = state.hero.maxHp; // Heal on level up
+                    max = Math.floor(max * 1.5);
+                    // Level Up Full Heal?
+                    // health: { ...state.health, physical: 100, mental: 100 }
                 }
                 return {
-                    hero: { ...state.hero, xp: newXp, level: newLevel, availablePoints: points, maxMp, hp }
+                    xp: newXp,
+                    level: newLevel,
+                    maxXp: max
                 };
-            }),
-            takeDamage: (amount) => set(state => ({
-                hero: { ...state.hero, hp: Math.max(0, state.hero.hp - amount) }
-            })),
-            restoreHp: (amount) => set(state => ({
-                hero: { ...state.hero, hp: Math.min(state.hero.maxHp, state.hero.hp + amount) }
-            })),
-            restoreMp: (amount) => set(state => ({
-                hero: { ...state.hero, mp: Math.min(state.hero.maxMp, state.hero.mp + amount) }
-            })),
-            spendMp: (amount) => {
-                const state = get();
-                if (state.hero.mp >= amount) {
-                    set({ hero: { ...state.hero, mp: state.hero.mp - amount } });
-                    return true;
-                }
-                return false;
-            },
-            allocatePoint: (stat) => set(state => {
-                if (state.hero.availablePoints > 0 && typeof state.hero[stat] === 'number') {
-                    return {
-                        hero: {
-                            ...state.hero,
-                            [stat]: (state.hero[stat] as number) + 1,
-                            availablePoints: state.hero.availablePoints - 1
-                        }
-                    };
-                }
-                return state;
             }),
 
             // --- Dailies ---
@@ -715,7 +748,6 @@ export const useDragonStore = create<DragonState>()(
 
                 if (!daily.completed) {
                     get().gainXp(10);
-                    get().restoreMp(10);
                     get().addHeat(20, daily.type);
 
                     set(curr => ({

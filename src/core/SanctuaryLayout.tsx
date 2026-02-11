@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDragonStore } from '../logic/dragonStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Egg, Home, User, Zap, CircleDollarSign, BookOpen } from 'lucide-react';
+import { LayoutGrid, Egg, Home, User, Zap, CircleDollarSign, BookOpen, Activity, GraduationCap } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const SanctuaryLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -58,6 +58,8 @@ const SanctuaryLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     <NavButton icon={Home} label="Home" active={location.pathname === '/'} onClick={() => navigate('/')} />
                     <NavButton icon={Egg} label="Hatchery" active={location.pathname === '/hatchery'} onClick={() => navigate('/hatchery')} />
                     <NavButton icon={LayoutGrid} label="Dashboard" active={location.pathname === '/dashboard'} onClick={() => navigate('/dashboard')} />
+                    <NavButton icon={GraduationCap} label="Academy" active={location.pathname === '/lessons'} onClick={() => navigate('/lessons')} />
+                    <NavButton icon={Activity} label="Analysis" active={location.pathname === '/analysis'} onClick={() => navigate('/analysis')} />
                     <NavButton icon={BookOpen} label="Grimoire" active={location.pathname === '/grimoire'} onClick={() => navigate('/grimoire')} />
                     <NavButton icon={User} label="Profile" active={location.pathname === '/profile'} onClick={() => navigate('/profile')} />
                 </div>
