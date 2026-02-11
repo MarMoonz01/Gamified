@@ -46,7 +46,7 @@ if (typeof window !== 'undefined') {
     loadSound('ERROR', 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3'); // Error
     loadSound('LEVEL_UP', 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'); // Victory Intro
     loadSound('QUEST_COMPLETE', 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-    loadSound('HATCH', 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'); // Magic Chime
+    loadSound('HATCH', 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'); // Magic Chime (Replaced with working asset)
     loadSound('ATTACK', 'https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3'); // Sword Hit
     loadSound('DAMAGE', 'https://assets.mixkit.co/active_storage/sfx/214/214-preview.mp3'); // Hit
     loadSound('VICTORY', 'https://assets.mixkit.co/active_storage/sfx/1431/1431-preview.mp3'); // Win Music
