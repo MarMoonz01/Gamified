@@ -55,7 +55,7 @@ const DragonLessons: React.FC = () => {
     const [quizIndex, setQuizIndex] = useState(0);
     const [quizScore, setQuizScore] = useState(0);
     const [showQuiz, setShowQuiz] = useState(false);
-    const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
+    // const [quizAnswers, setQuizAnswers] = useState<string[]>([]); // Removed unused
     const [error, setError] = useState('');
     const [showEncounter, setShowEncounter] = useState(false);
 
@@ -80,7 +80,7 @@ const DragonLessons: React.FC = () => {
         setShowQuiz(false);
         setQuizIndex(0);
         setQuizScore(0);
-        setQuizAnswers([]);
+        // setQuizAnswers([]); // Removed unused
         playSound('CLICK');
 
         let prompt = "";
@@ -161,11 +161,21 @@ const DragonLessons: React.FC = () => {
         }
     };
 
-    const handleComplete = () => {
-        gainXp(50);
-        addSummonCharge(20);
-
+    const handleComplete = (quizSuccess?: boolean) => {
+        let xpGain = 50;
+        let chargeGain = 20;
         let msg = "Knowledge absorbed! +50 XP, +20% Boss Charge";
+
+        if (quizSuccess) {
+            xpGain += 50;
+            chargeGain += 10;
+            msg = "Perfect Quiz! +100 XP, +30% Boss Charge";
+        } else if (quizSuccess === false) {
+            msg = "Lesson Complete. +50 XP, +20% Boss Charge";
+        }
+
+        gainXp(xpGain);
+        addSummonCharge(chargeGain);
 
         if (mode === 'VOCAB') {
             updateIELTS({
