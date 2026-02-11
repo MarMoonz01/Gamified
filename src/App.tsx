@@ -12,6 +12,8 @@ import Profile from './features/Profile';
 import ChatInterface from './features/ChatInterface';
 import Dashboard from './features/Dashboard';
 import Analysis from './features/Analysis';
+import Achievements from './features/Achievements';
+import GuildShop from './features/GuildShop';
 
 import { useEffect, useRef } from 'react';
 import { useDragonStore } from './logic/dragonStore';
@@ -73,6 +75,8 @@ function App() {
             <Route path="/grimoire" element={<Grimoire />} />
             <Route path="/oracle" element={<OracleDeck />} />
             <Route path="/analysis" element={<Analysis />} />
+            <Route path="/achievements" element={<Achievements />} />
+            <Route path="/shop" element={<GuildShop />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/landing" element={<Landing />} />
           </Routes>

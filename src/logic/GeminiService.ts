@@ -160,6 +160,35 @@ class GeminiService {
         `;
         return this.generateJSON(prompt);
     }
+
+    public async generateRewardIdeas(userProfile: any, habits: any[]): Promise<{ id: string, name: string, description: string, cost: number, color: string, icon: string }[] | null> {
+        if (!this.genAI) return null;
+
+        const prompt = `
+        Act as a Guild Merchant. Suggest 3 custom real-life rewards for this user based on their profile and habits to incentivize them.
+        User Profile: ${JSON.stringify(userProfile)}
+        Habits: ${JSON.stringify(habits)}
+
+        Create 3 rewards:
+        1. Small (Cost 30-50 Gold) - e.g., 15 min break, sweet treat.
+        2. Medium (Cost 80-150 Gold) - e.g., Watch an episode, gaming session.
+        3. Large (Cost 200-500 Gold) - e.g., Buy a book, day trip.
+
+        Respond in JSON array: 
+        [
+            { "id": "ai_1", "name": "Title", "description": "Short desc", "cost": 50, "color": "blue/purple/amber/rose", "icon": "Coffee/Music/Zap/Gift" }
+        ]
+        Allowed Icons: Coffee, Music, Zap, Gift, Book, Gamepad, Star.
+        `;
+
+        try {
+            const result = await this.generateJSON<any[]>(prompt);
+            return result;
+        } catch (e) {
+            console.error("Failed to generate rewards", e);
+            return null;
+        }
+    }
 }
 
 export const geminiService = new GeminiService();

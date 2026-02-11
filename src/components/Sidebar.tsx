@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, User, ScrollText, Skull, Map } from 'lucide-react';
+import { LayoutDashboard, User, ScrollText, Skull, Map, Trophy } from 'lucide-react';
 import clsx from 'clsx';
 
 const Sidebar: React.FC = () => {
@@ -8,6 +8,8 @@ const Sidebar: React.FC = () => {
         { path: '/dashboard', label: 'Status', icon: LayoutDashboard },
         { path: '/quests', label: 'Quests', icon: ScrollText },
         { path: '/dungeon', label: 'Raids', icon: Skull },
+        { path: '/analysis', label: 'Analysis', icon: ScrollText },
+        { path: '/achievements', label: 'Deeds', icon: Trophy },
         { path: '/profile', label: 'Hero', icon: User },
         { path: '/world', label: 'Map', icon: Map },
     ];

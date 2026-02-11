@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDragonStore } from '../logic/dragonStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Egg, Home, User, Zap, CircleDollarSign, BookOpen, Activity, GraduationCap } from 'lucide-react';
+import { LayoutGrid, Egg, Home, User, Zap, CircleDollarSign, BookOpen, Activity, GraduationCap, Trophy, Coins } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const SanctuaryLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -61,6 +61,8 @@ const SanctuaryLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     <NavButton icon={GraduationCap} label="Academy" active={location.pathname === '/lessons'} onClick={() => navigate('/lessons')} />
                     <NavButton icon={Activity} label="Analysis" active={location.pathname === '/analysis'} onClick={() => navigate('/analysis')} />
                     <NavButton icon={BookOpen} label="Grimoire" active={location.pathname === '/grimoire'} onClick={() => navigate('/grimoire')} />
+                    <NavButton icon={Trophy} label="Deeds" active={location.pathname === '/achievements'} onClick={() => navigate('/achievements')} />
+                    <NavButton icon={Coins} label="Shop" active={location.pathname === '/shop'} onClick={() => navigate('/shop')} />
                     <NavButton icon={User} label="Profile" active={location.pathname === '/profile'} onClick={() => navigate('/profile')} />
                 </div>
             </nav>

@@ -103,6 +103,24 @@ export interface Task {
     expiresAt?: number;
 }
 
+export interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    icon: string; // lucide icon name
+    condition: (state: DragonState) => boolean;
+    reward: { type: 'GOLD' | 'ESSENCE', amount: number };
+    unlockedAt: number | null;
+}
+
+export const INITIAL_ACHIEVEMENTS: Omit<Achievement, 'condition'>[] = [
+    { id: 'first_hatch', title: 'Dragon Born', description: 'Hatch your first dragon egg.', icon: 'Egg', reward: { type: 'ESSENCE', amount: 50 }, unlockedAt: null },
+    { id: 'habit_master', title: 'Disciplined Soul', description: 'Maintain a habit streak of 7 days.', icon: 'Flame', reward: { type: 'GOLD', amount: 100 }, unlockedAt: null },
+    { id: 'scholar', title: 'Seeker of Truth', description: 'Collect 10 words in your Grimoire.', icon: 'BookOpen', reward: { type: 'ESSENCE', amount: 75 }, unlockedAt: null },
+    { id: 'rich', title: 'Golden Hoard', description: 'Accumulate 1000 Gold.', icon: 'Coins', reward: { type: 'ESSENCE', amount: 100 }, unlockedAt: null },
+    { id: 'collector', title: 'Zoo Keeper', description: 'Have 3 or more dragons.', icon: 'PawPrint', reward: { type: 'GOLD', amount: 200 }, unlockedAt: null },
+];
+
 export interface Daily {
     id: string;
     title: string;
@@ -196,6 +214,10 @@ interface DragonState {
     // --- Player Stats ---
     gainXp: (amount: number) => void;
 
+    // --- Achievements ---
+    achievements: Achievement[];
+    checkAchievements: () => void;
+
     // --- Dailies ---
     addDaily: (title: string, type?: Daily['type']) => void;
     toggleDaily: (id: string) => void;
@@ -231,6 +253,45 @@ export const useDragonStore = create<DragonState>()(
     persist(
         (set, get) => ({
             // Dragon Management
+            achievements: INITIAL_ACHIEVEMENTS as Achievement[],
+            checkAchievements: () => {
+                const state = get();
+                const currentAchievements = state.achievements;
+                let newUnlock = false;
+                const updates: Partial<DragonState> = {};
+
+                const updatedAchievements = currentAchievements.map(ach => {
+                    if (ach.unlockedAt) return ach; // Already unlocked
+
+                    let isMet = false;
+                    switch (ach.id) {
+                        case 'first_hatch': isMet = state.dragons.length > 0; break;
+                        case 'habit_master': isMet = state.habits.some(h => h.streak >= 7); break;
+                        case 'scholar': isMet = state.vocabList.length >= 10; break;
+                        case 'rich': isMet = state.gold >= 1000; break;
+                        case 'collector': isMet = state.dragons.length >= 3; break;
+                    }
+
+                    if (isMet) {
+                        newUnlock = true;
+                        if (ach.reward.type === 'GOLD') {
+                            updates.gold = (state.gold + ach.reward.amount); // Simplification: just add to current
+                        } else if (ach.reward.type === 'ESSENCE') {
+                            updates.essence = (state.essence + ach.reward.amount);
+                        }
+                        return { ...ach, unlockedAt: Date.now() };
+                    }
+                    return ach;
+                });
+
+                if (newUnlock) {
+                    set((prev) => ({
+                        achievements: updatedAchievements,
+                        gold: updates.gold !== undefined ? updates.gold : prev.gold,
+                        essence: updates.essence !== undefined ? updates.essence : prev.essence
+                    }));
+                }
+            },
             dragons: [],
             activeDragonId: null, // Track currently selected dragon
             eggs: [],
@@ -423,6 +484,7 @@ export const useDragonStore = create<DragonState>()(
                         activeEgg: null
                     };
                 });
+                get().checkAchievements();
             },
 
             setActiveDragon: (id) => set({ activeDragonId: id }),
@@ -644,20 +706,23 @@ export const useDragonStore = create<DragonState>()(
                 window.location.reload();
             },
 
-            addVocab: (word, meaning, type) => set(state => ({
-                vocabList: [
-                    ...state.vocabList,
-                    {
-                        id: uuidv4(),
-                        word,
-                        meaning,
-                        type,
-                        mastery: 0,
-                        lastPracticed: Date.now()
-                    }
-                ],
-                essence: state.essence + 5 // Reward for adding knowledge
-            })),
+            addVocab: (word, meaning, type) => {
+                set(state => ({
+                    vocabList: [
+                        ...state.vocabList,
+                        {
+                            id: uuidv4(),
+                            word,
+                            meaning,
+                            type,
+                            mastery: 0,
+                            lastPracticed: Date.now()
+                        }
+                    ],
+                    essence: state.essence + 5 // Reward for adding knowledge
+                }));
+                get().checkAchievements();
+            },
 
             practiceVocab: (id, success) => set(state => {
                 const wordIndex = state.vocabList.findIndex(v => v.id === id);
