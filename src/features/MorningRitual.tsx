@@ -85,18 +85,22 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         if (!aiResponse) return;
 
         aiResponse.schedule.forEach(item => {
-            // Logic: Meals/Exercise/Rest -> Habits (Recurring/Spammable for Heat)
-            // Work -> Tasks (One-off for Gold/Completion)
+            // Parse Time for Expiration (Window: 2 Hours)
+            const [hours, minutes] = item.time.split(':').map(Number);
+            const scheduleDate = new Date();
+            scheduleDate.setHours(hours, minutes, 0, 0);
 
+            // Expiration = Schedule Time + 2 Hours
+            const expiresAt = scheduleDate.getTime() + (2 * 60 * 60 * 1000);
+
+            // Logic: Meals/Exercise/Rest -> Habits
             if (['MEAL', 'REST', 'EXERCISE'].includes(item.type)) {
                 let habitType: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD' = 'HEALTH';
-
-                // Refine habit type if needed, but mostly HEALTH for these
                 if (item.type === 'EXERCISE') habitType = 'HEALTH';
 
-                addHabit(`[${item.time}] ${item.activity}`, habitType);
+                addHabit(`[${item.time}] ${item.activity}`, habitType, expiresAt);
             } else {
-                // WORK / ROUTINE
+                // WORK / ROUTINE -> Task
                 let taskType: Task['type'] = 'STUDY';
                 let rank: any = 'C';
 
@@ -112,12 +116,12 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
                     `[${item.time}] ${item.activity}`,
                     taskType,
                     rank,
-                    item.details || "Elder Ignis Plan"
+                    item.details || "Elder Ignis Plan",
+                    expiresAt
                 );
             }
         });
 
-        addHeat(100, 'SOCIAL'); // Bonus Heat for planning
         onClose();
     };
 

@@ -13,11 +13,43 @@ const Hatchery: React.FC = () => {
         activeEgg, dragons,
         addHeat, hatchEgg, startNewEgg,
         habits, tasks, addHabit, triggerHabit, deleteHabit, addTask, toggleTask, deleteTask,
-        feedDragon, trainDragon, evolveDragon
+        feedDragon, trainDragon, evolveDragon,
+        checkDailyReset
     } = useDragonStore();
     const { playSound } = useSound();
     const [activeTab, setActiveTab] = useState<'FUEL' | 'FOCUS'>('FUEL');
     const [showMorningRitual, setShowMorningRitual] = useState(false);
+
+    // activeEgg check for returning early
+    // We need to keep hooks at top level before return
+
+    // Daily Reset Check on Mount
+    useEffect(() => {
+        checkDailyReset();
+    }, [checkDailyReset]);
+
+    // Expiration Check Loop (Every Minute)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+
+            // Check Habits
+            habits.forEach(h => {
+                if (h.expiresAt && h.expiresAt < now) {
+                    deleteHabit(h.id);
+                }
+            });
+
+            // Check Tasks
+            tasks.forEach(t => {
+                if (t.expiresAt && t.expiresAt < now && !t.completed) {
+                    deleteTask(t.id);
+                }
+            });
+        }, 60000); // Check every minute
+
+        return () => clearInterval(interval);
+    }, [habits, tasks, deleteHabit, deleteTask]);
 
     // Focus Mode State
     const [focusSubject, setFocusSubject] = useState<'READING' | 'LISTENING' | 'WRITING' | 'SPEAKING' | null>(null);

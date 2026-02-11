@@ -55,6 +55,7 @@ export interface Habit {
     streak: number;
     value: number; // Added for compatibility with legacy store
     type: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD' | 'BOTH';
+    expiresAt?: number;
 }
 
 export interface HeroStats {
@@ -80,6 +81,7 @@ export interface Task {
     type: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD';
     rank: Rank;
     description?: string;
+    expiresAt?: number;
 }
 
 export interface Daily {
@@ -120,11 +122,11 @@ interface DragonState {
     evolveDragon: (dragonId: string) => void;
 
     // ... (Existing CRUD & Boss flow)
-    addHabit: (title: string, type: Habit['type']) => void;
+    addHabit: (title: string, type: Habit['type'], expiresAt?: number) => void;
     triggerHabit: (id: string, direction?: 'UP' | 'DOWN') => void;
     deleteHabit: (id: string) => void;
 
-    addTask: (title: string, type: Task['type'], rank?: Rank, description?: string) => void;
+    addTask: (title: string, type: Task['type'], rank?: Rank, description?: string, expiresAt?: number) => void;
     toggleTask: (id: string) => void;
     deleteTask: (id: string) => void;
 
@@ -132,6 +134,11 @@ interface DragonState {
 
     startNewEgg: (rarity: 'COMMON' | 'RARE' | 'LEGENDARY') => void;
     resetGame: () => void;
+
+    // Daily Logic
+    lastResetDate: string;
+    resetDailies: () => void;
+    checkDailyReset: () => void;
 
     summonCharge: number;
     addSummonCharge: (amount: number) => void;
@@ -452,8 +459,8 @@ export const useDragonStore = create<DragonState>()(
                 });
             },
 
-            addHabit: (title, type) => set(state => ({
-                habits: [...state.habits, { id: uuidv4(), title, streak: 0, value: 0, type }]
+            addHabit: (title, type, expiresAt) => set(state => ({
+                habits: [...state.habits, { id: uuidv4(), title, streak: 0, value: 0, type, expiresAt }]
             })),
 
             triggerHabit: (id, direction = 'UP') => {
@@ -475,9 +482,27 @@ export const useDragonStore = create<DragonState>()(
                 habits: state.habits.filter(h => h.id !== id)
             })),
 
-            addTask: (title, type, rank = 'E', description) => set(state => ({
-                tasks: [...state.tasks, { id: uuidv4(), title, completed: false, type, rank, description }]
+            addTask: (title, type, rank = 'E', description, expiresAt) => set(state => ({
+                tasks: [...state.tasks, { id: uuidv4(), title, completed: false, type, rank, description, expiresAt }]
             })),
+
+            lastResetDate: new Date().toISOString().split('T')[0],
+
+            resetDailies: () => set(state => ({
+                // Clear scheduled items (those with expiresAt) and reset daily completion
+                tasks: state.tasks.filter(t => !t.expiresAt),
+                habits: state.habits.filter(h => !h.expiresAt),
+                dailies: state.dailies.map(d => ({ ...d, completed: false })),
+                lastResetDate: new Date().toISOString().split('T')[0]
+            })),
+
+            checkDailyReset: () => {
+                const today = new Date().toISOString().split('T')[0];
+                const { lastResetDate, resetDailies } = get();
+                if (lastResetDate !== today) {
+                    resetDailies();
+                }
+            },
 
             toggleTask: (id) => {
                 set(state => {
