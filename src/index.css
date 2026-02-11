@@ -154,6 +154,7 @@ a:hover,
   animation: shimmer 2s infinite linear;
 }
 
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -161,4 +162,24 @@ a:hover,
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* --- Custom Scrollbar --- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(44, 24, 16, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+  border: 1px solid #5D4037;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8B4513;
 }
