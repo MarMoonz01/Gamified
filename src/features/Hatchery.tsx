@@ -126,85 +126,88 @@ const Hatchery: React.FC = () => {
                     <button onClick={() => setActiveTab('FOCUS')} className={`flex-1 py-2 font-medieval font-bold rounded-t-sm transition-colors border-2 border-b-0 ${activeTab === 'FOCUS' ? 'bg-[#FDF6E3] border-[#5D4037] text-[#2C1810]' : 'bg-black/10 border-transparent text-amber-900/50 hover:bg-black/20'}`}>IELTS RITUAL</button>
                 </div>
 
-                <div className="glass-panel p-6 flex-1 min-h-0 overflow-y-auto relative rounded-t-none mt-[-2px] custom-scrollbar">
-                    {activeTab === 'FUEL' ? (
-                        <>
-                            {/* AI Secretary Button */}
-                            <motion.button
-                                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                onClick={() => setShowMorningRitual(true)}
-                                className="w-full mb-6 py-3 bg-gradient-to-r from-[#2C1810] to-[#5D4037] text-[#D4AF37] border-2 border-[#D4AF37] rounded-lg font-medieval shadow-lg flex items-center justify-center gap-2"
-                            >
-                                <Sparkles size={18} /> CONSULT ELDER IGNIS <Sparkles size={18} />
-                            </motion.button>
+                <div className="glass-panel flex-1 min-h-0 relative rounded-t-none mt-[-2px]">
+                    <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-6 bg-transparent">
+                        {activeTab === 'FUEL' ? (
+                            <>
+                                {/* AI Secretary Button */}
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                    onClick={() => setShowMorningRitual(true)}
+                                    className="w-full mb-6 py-3 bg-gradient-to-r from-[#2C1810] to-[#5D4037] text-[#D4AF37] border-2 border-[#D4AF37] rounded-lg font-medieval shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles size={18} /> CONSULT ELDER IGNIS <Sparkles size={18} />
+                                </motion.button>
 
-                            {/* HABITS */}
-                            <div className="mb-6">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="text-sm font-bold text-[#8B4513] uppercase tracking-wider font-medieval">Habits (Food)</h3>
-                                    <button onClick={() => setShowAddModal('HABIT')} className="p-1 rounded bg-green-100 hover:bg-green-200 text-green-800 border border-green-300"><Plus size={16} /></button>
-                                </div>
-                                <div className="space-y-2">
-                                    {habits.map(habit => (
-                                        <div key={habit.id} className="flex items-center justify-between p-3 bg-[#FDF6E3]/50 rounded-sm border border-[#D7C4A1] hover:bg-white/40 transition">
-                                            <div className="flex items-center gap-3">
-                                                <button onClick={() => triggerHabit(habit.id)} className="w-8 h-8 rounded-full bg-green-100 border border-green-300 hover:bg-green-200 flex items-center justify-center text-green-700 transition-colors shadow-sm"><Zap size={16} /></button>
-                                                <div>
-                                                    <div className="font-bold text-[#2C1810]">{habit.title}</div>
-                                                    <div className="text-xs text-[#5D4037]">Streak: {habit.streak} 🔥</div>
+                                {/* HABITS */}
+                                <div className="mb-6">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="text-sm font-bold text-[#8B4513] uppercase tracking-wider font-medieval">Habits (Food)</h3>
+                                        <button onClick={() => setShowAddModal('HABIT')} className="p-1 rounded bg-green-100 hover:bg-green-200 text-green-800 border border-green-300"><Plus size={16} /></button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {habits.map(habit => (
+                                            <div key={habit.id} className="flex items-center justify-between p-3 bg-[#FDF6E3]/50 rounded-sm border border-[#D7C4A1] hover:bg-white/40 transition">
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => triggerHabit(habit.id)} className="w-8 h-8 rounded-full bg-green-100 border border-green-300 hover:bg-green-200 flex items-center justify-center text-green-700 transition-colors shadow-sm"><Zap size={16} /></button>
+                                                    <div>
+                                                        <div className="font-bold text-[#2C1810]">{habit.title}</div>
+                                                        <div className="text-xs text-[#5D4037]">Streak: {habit.streak} 🔥</div>
+                                                    </div>
                                                 </div>
+                                                <button onClick={() => deleteHabit(habit.id)} className="text-[#D7C4A1] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                             </div>
-                                            <button onClick={() => deleteHabit(habit.id)} className="text-[#D7C4A1] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* TASKS */}
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="text-sm font-bold text-[#8B4513] uppercase tracking-wider font-medieval">Tasks (Gold)</h3>
-                                    <button onClick={() => setShowAddModal('TASK')} className="p-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300"><Plus size={16} /></button>
-                                </div>
-                                <div className="space-y-2">
-                                    {tasks.map(task => (
-                                        <div key={task.id} className={`flex items-center justify-between p-3 rounded-sm border transition-all ${task.completed ? 'bg-black/5 border-transparent opacity-60' : 'bg-[#FDF6E3]/50 border-[#D7C4A1] hover:bg-white/40'}`}>
-                                            <div className="flex items-center gap-3">
-                                                <button onClick={() => toggleTask(task.id)} className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${task.completed ? 'bg-[#D4AF37] border-[#D4AF37] text-white' : 'border-[#D7C4A1] hover:border-[#D4AF37] bg-white/50'}`}>{task.completed && <CheckCircle size={14} />}</button>
-                                                <div className={`font-bold ${task.completed ? 'line-through text-amber-900/40' : 'text-[#2C1810]'}`}>{task.title}</div>
+                                {/* TASKS */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="text-sm font-bold text-[#8B4513] uppercase tracking-wider font-medieval">Question Bank</h3>
+                                        <button onClick={() => setShowAddModal('TASK')} className="p-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300"><Plus size={16} /></button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {tasks.map(task => (
+                                            <div key={task.id} className={`flex items-center justify-between p-3 rounded-sm border transition-all ${task.completed ? 'bg-black/5 border-transparent opacity-60' : 'bg-[#FDF6E3]/50 border-[#D7C4A1] hover:bg-white/40'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => toggleTask(task.id)} className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${task.completed ? 'bg-[#D4AF37] border-[#D4AF37] text-white' : 'border-[#D7C4A1] hover:border-[#D4AF37] bg-white/50'}`}>{task.completed && <CheckCircle size={14} />}</button>
+                                                    <div className={`font-bold ${task.completed ? 'line-through text-amber-900/40' : 'text-[#2C1810]'}`}>{task.title}</div>
+                                                </div>
+                                                <button onClick={() => deleteTask(task.id)} className="text-[#D7C4A1] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                             </div>
-                                            <button onClick={() => deleteTask(task.id)} className="text-[#D7C4A1] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </>
-                    ) : (
-                        // FOCUS MODE (Same as before)
-                        <div className="flex flex-col items-center h-full gap-6">
-                            <h2 className="system-header text-center w-full">IELTS Focus Ritual</h2>
-                            {!isTimerRunning ? (
-                                <div className="grid grid-cols-2 gap-4 w-full">
-                                    <FocusButton active={focusSubject === 'READING'} onClick={() => setFocusSubject('READING')} icon={BookOpen} label="Reading" color="text-purple-600" />
-                                    <FocusButton active={focusSubject === 'LISTENING'} onClick={() => setFocusSubject('LISTENING')} icon={Headphones} label="Listening" color="text-blue-600" />
-                                    <FocusButton active={focusSubject === 'WRITING'} onClick={() => setFocusSubject('WRITING')} icon={PenTool} label="Writing" color="text-red-800" />
-                                    <FocusButton active={focusSubject === 'SPEAKING'} onClick={() => setFocusSubject('SPEAKING')} icon={Mic} label="Speaking" color="text-amber-600" />
-                                </div>
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center">
-                                    <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }} className="text-6xl font-medieval font-bold text-[#2C1810]">{formatTime(timeLeft)}</motion.div>
-                                    <div className="mt-4 text-[#5D4037] font-medieval uppercase tracking-widest">Focusing on {focusSubject}</div>
-                                </div>
-                            )}
-                            <div className="mt-auto w-full">
-                                {isTimerRunning ? (
-                                    <button onClick={() => setIsTimerRunning(false)} className="w-full py-4 rounded-sm border-2 border-red-900/20 text-red-800 hover:bg-red-50 bg-[#FAEBEB] font-bold font-medieval tracking-widest">CANCEL RITUAL</button>
+                            </>
+                        ) : (
+                            // FOCUS MODE (Same as before)
+                            <div className="flex flex-col items-center min-h-full gap-6">
+                                <h2 className="system-header text-center w-full">IELTS Focus Ritual</h2>
+                                {!isTimerRunning ? (
+                                    <div className="grid grid-cols-2 gap-4 w-full">
+                                        <FocusButton active={focusSubject === 'READING'} onClick={() => setFocusSubject('READING')} icon={BookOpen} label="Reading" color="text-purple-600" />
+                                        <FocusButton active={focusSubject === 'LISTENING'} onClick={() => setFocusSubject('LISTENING')} icon={Headphones} label="Listening" color="text-blue-600" />
+                                        <FocusButton active={focusSubject === 'WRITING'} onClick={() => setFocusSubject('WRITING')} icon={PenTool} label="Writing" color="text-red-800" />
+                                        <FocusButton active={focusSubject === 'SPEAKING'} onClick={() => setFocusSubject('SPEAKING')} icon={Mic} label="Speaking" color="text-amber-600" />
+                                    </div>
                                 ) : (
-                                    <button disabled={!focusSubject} onClick={() => setIsTimerRunning(true)} className={`w-full py-4 rounded-sm font-bold transition-all font-medieval tracking-widest border-2 ${focusSubject ? 'bg-[#2C1810] text-[#D4AF37] border-[#D4AF37] hover:bg-black shadow-lg' : 'bg-slate-200 text-slate-400 border-transparent cursor-not-allowed'}`}>BEGIN 25m SESSION</button>
+                                    <div className="flex-1 flex flex-col items-center justify-center">
+                                        <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }} className="text-6xl font-medieval font-bold text-[#2C1810]">{formatTime(timeLeft)}</motion.div>
+                                        <div className="mt-4 text-[#5D4037] font-medieval uppercase tracking-widest">Focusing on {focusSubject}</div>
+                                    </div>
                                 )}
+                                <div className="mt-auto w-full pt-4">
+                                    {isTimerRunning ? (
+                                        <button onClick={() => setIsTimerRunning(false)} className="w-full py-4 rounded-sm border-2 border-red-900/20 text-red-800 hover:bg-red-50 bg-[#FAEBEB] font-bold font-medieval tracking-widest">CANCEL RITUAL</button>
+                                    ) : (
+                                        <button disabled={!focusSubject} onClick={() => setIsTimerRunning(true)} className={`w-full py-4 rounded-sm font-bold transition-all font-medieval tracking-widest border-2 ${focusSubject ? 'bg-[#2C1810] text-[#D4AF37] border-[#D4AF37] hover:bg-black shadow-lg' : 'bg-slate-200 text-slate-400 border-transparent cursor-not-allowed'}`}>BEGIN 25m SESSION</button>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
                     <AnimatePresence>
                         {showMorningRitual && <MorningRitual onClose={() => setShowMorningRitual(false)} />}
                         {showAddModal && (
