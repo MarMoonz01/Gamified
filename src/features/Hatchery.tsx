@@ -126,7 +126,7 @@ const Hatchery: React.FC = () => {
                     <button onClick={() => setActiveTab('FOCUS')} className={`flex-1 py-2 font-medieval font-bold rounded-t-sm transition-colors border-2 border-b-0 ${activeTab === 'FOCUS' ? 'bg-[#FDF6E3] border-[#5D4037] text-[#2C1810]' : 'bg-black/10 border-transparent text-amber-900/50 hover:bg-black/20'}`}>IELTS RITUAL</button>
                 </div>
 
-                <div className="glass-panel p-6 h-full overflow-y-auto flex-1 relative rounded-t-none mt-[-2px]">
+                <div className="glass-panel p-6 flex-1 min-h-0 overflow-y-auto relative rounded-t-none mt-[-2px] custom-scrollbar">
                     {activeTab === 'FUEL' ? (
                         <>
                             {/* AI Secretary Button */}
