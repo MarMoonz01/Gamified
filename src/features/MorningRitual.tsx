@@ -24,7 +24,7 @@ interface ScheduleItem {
 
 const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     // ดึง tasks เดิมมาด้วย เพื่อเอามาต่อท้าย (Append) ไม่ให้ของเก่าหาย
-    const { tasks, setTasks, addHeat } = useDragonStore();
+    const { addHeat, addHabit, addTask } = useDragonStore();
 
     const [step, setStep] = useState<'MOOD' | 'GENERATING' | 'RESULT'>('MOOD');
 
@@ -84,46 +84,40 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     const acceptSchedule = () => {
         if (!aiResponse) return;
 
-        // แปลง Schedule เป็น Task ที่ถูกต้องตาม Type ใน DragonStore
-        const newTasks: Task[] = aiResponse.schedule.map((item, index) => {
-            let type: Task['type'] = 'GOLD'; // Default
-            let rank: Task['rank'] = 'D';
+        aiResponse.schedule.forEach(item => {
+            // Logic: Meals/Exercise/Rest -> Habits (Recurring/Spammable for Heat)
+            // Work -> Tasks (One-off for Gold/Completion)
 
-            // Mapping Logic
-            switch (item.type) {
-                case 'MEAL':
-                case 'REST':
-                    type = 'HEALTH';
-                    rank = 'E';
-                    break;
-                case 'WORK':
-                    type = 'STUDY';
-                    rank = 'S';
-                    break;
-                case 'EXERCISE':
-                    type = 'HEALTH';
-                    rank = 'A';
-                    break;
-                case 'ROUTINE':
-                    type = 'GOLD';
+            if (['MEAL', 'REST', 'EXERCISE'].includes(item.type)) {
+                let habitType: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD' = 'HEALTH';
+
+                // Refine habit type if needed, but mostly HEALTH for these
+                if (item.type === 'EXERCISE') habitType = 'HEALTH';
+
+                addHabit(`[${item.time}] ${item.activity}`, habitType);
+            } else {
+                // WORK / ROUTINE
+                let taskType: Task['type'] = 'STUDY';
+                let rank: any = 'C';
+
+                if (item.type === 'ROUTINE') {
+                    taskType = 'GOLD';
                     rank = 'D';
-                    break;
-            }
+                } else if (item.type === 'WORK') {
+                    taskType = 'STUDY';
+                    rank = 'A';
+                }
 
-            return {
-                id: `sched-${Date.now()}-${index}`,
-                title: `[${item.time}] ${item.activity}`,
-                completed: false,
-                type: type,
-                rank: rank,
-                description: item.details || "Elder Ignis Plan"
-            };
+                addTask(
+                    `[${item.time}] ${item.activity}`,
+                    taskType,
+                    rank,
+                    item.details || "Elder Ignis Plan"
+                );
+            }
         });
 
-        // Append ต่อจาก Task เดิม
-        setTasks([...tasks, ...newTasks]);
-
-        addHeat(100, 'SOCIAL'); // Bonus แต้ม Social
+        addHeat(100, 'SOCIAL'); // Bonus Heat for planning
         onClose();
     };
 
