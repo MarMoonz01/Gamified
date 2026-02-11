@@ -6,7 +6,7 @@ import { BookOpen, Scroll, CheckCircle, Brain, RefreshCw, Feather, Lock, Flame }
 import { useSound } from '../logic/soundStore';
 import DragonEncounter from './DragonEncounter';
 
-type LessonMode = 'VOCAB' | 'GRAMMAR';
+type LessonMode = 'VOCAB' | 'GRAMMAR' | 'MOCK';
 
 interface VocabItem {
     word: string;
@@ -21,19 +21,41 @@ interface GrammarPoint {
     example: string;
 }
 
+interface MockExam {
+    type: 'WRITING' | 'SPEAKING';
+    question: string;
+    feedback?: string;
+    score?: number;
+    tips?: string[];
+}
+
+interface QuizItem {
+    question: string;
+    options: string[];
+    correctIndex: number;
+}
+
 interface LessonData {
     mode: LessonMode;
-    content: VocabItem[] | GrammarPoint;
+    content: VocabItem[] | GrammarPoint | MockExam;
+    quiz?: QuizItem[];
 }
 
 
 const DragonLessons: React.FC = () => {
     const { playSound } = useSound();
-    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg, ielts, updateIELTS } = useDragonStore(); // Unified store usage
+    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg, ielts, updateIELTS, addVocab } = useDragonStore(); // Unified store usage
 
     const [mode, setMode] = useState<LessonMode>('VOCAB');
+    const [mockType, setMockType] = useState<'WRITING' | 'SPEAKING'>('WRITING');
     const [loading, setLoading] = useState(false);
     const [lesson, setLesson] = useState<LessonData | null>(null);
+    const [userResponse, setUserResponse] = useState('');
+    const [grading, setGrading] = useState(false);
+    const [quizIndex, setQuizIndex] = useState(0);
+    const [quizScore, setQuizScore] = useState(0);
+    const [showQuiz, setShowQuiz] = useState(false);
+    const [quizAnswers, setQuizAnswers] = useState<string[]>([]);
     const [error, setError] = useState('');
     const [showEncounter, setShowEncounter] = useState(false);
 
@@ -53,20 +75,36 @@ const DragonLessons: React.FC = () => {
         setError('');
         setLesson(null);
         setMode(selectedMode);
+        setUserResponse('');
+        setGrading(false);
+        setShowQuiz(false);
+        setQuizIndex(0);
+        setQuizScore(0);
+        setQuizAnswers([]);
         playSound('CLICK');
 
-        const prompt = selectedMode === 'VOCAB'
-            ? "Generate 3 advanced English vocabulary words (IELTS Band 8-9) with definitions, 2 synonyms, and an example sentence for each. Return ONLY a JSON object with key 'items' which is an array of objects: {word, definition, synonyms (array), example}."
-            : "Explain one advanced English grammar concept (IELTS Band 8-9) like Inversion, Mixed Conditionals, or Subjunctive. Provide a clear explanation and an example sentence. Return ONLY a JSON object with keys: {topic, explanation, example}.";
+        let prompt = "";
+        if (selectedMode === 'VOCAB') {
+            prompt = "Generate 3 useful English vocabulary words (IELTS Band 6-8) that are practical for essays/speaking. Include precise definitions, 2 synonyms, and a clear example sentence for each. ALSO generate a simple 3-question multiple-choice quiz testing these words. Return ONLY a JSON object with keys: 'items' (array of {word, definition, synonyms, example}) and 'quiz' (array of {question, options (array of 4 strings), correctIndex (0-3)}).";
+        } else if (selectedMode === 'GRAMMAR') {
+            prompt = "Explain one essential English grammar concept (IELTS Band 6-8) like Passive Voice, Relative Clauses, or Conditionals. Provide a clear explanation and 2 example sentences. ALSO generate a 3-question quiz testing this concept. Return ONLY a JSON object with keys: {topic, explanation, example, quiz: [{question, options, correctIndex}]}.";
+        } else if (selectedMode === 'MOCK') {
+            const type = mockType; // Use current mockType state
+            prompt = type === 'WRITING'
+                ? "Generate a common IELTS Writing Task 2 Essay question on a general topic (Education, Health, Work). Return ONLY a JSON object with keys: {type: 'WRITING', question: 'The question text...'}."
+                : "Generate an IELTS Speaking Part 2 Cue Card topic. Return ONLY a JSON object with keys: {type: 'SPEAKING', question: 'Describe a time when... You should say: ...'}."
+        }
 
         try {
             const data = await geminiService.generateJSON<any>(prompt);
 
             if (data) {
                 if (selectedMode === 'VOCAB' && data.items) {
-                    setLesson({ mode: 'VOCAB', content: data.items });
+                    setLesson({ mode: 'VOCAB', content: data.items, quiz: data.quiz });
                 } else if (selectedMode === 'GRAMMAR' && data.topic) {
-                    setLesson({ mode: 'GRAMMAR', content: data });
+                    setLesson({ mode: 'GRAMMAR', content: data, quiz: data.quiz });
+                } else if (selectedMode === 'MOCK' && data.question) {
+                    setLesson({ mode: 'MOCK', content: data });
                 } else {
                     throw new Error("Invalid format from Oracle");
                 }
@@ -79,6 +117,47 @@ const DragonLessons: React.FC = () => {
             playSound('ERROR');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const submitMockExam = async () => {
+        if (!lesson || lesson.mode !== 'MOCK' || !userResponse.trim()) return;
+
+        setGrading(true);
+        playSound('CLICK');
+
+        const mockContent = lesson.content as MockExam;
+        const prompt = `Grade this IELTS ${mockContent.type} response based on official criteria (0-9 Band).
+        Question: "${mockContent.question}"
+        Response: "${userResponse}"
+        Return ONLY a JSON object with keys: { score: number, feedback: "Short summary", tips: ["Tip 1", "Tip 2", "Tip 3"] }.`;
+
+        try {
+            const result = await geminiService.generateJSON<any>(prompt);
+            if (result && result.score !== undefined) {
+                const updatedContent = { ...mockContent, ...result };
+                setLesson({ ...lesson, content: updatedContent });
+
+                // Update Store
+                const scoreChange = result.score >= 7 ? 0.2 : 0.1;
+                if (mockContent.type === 'WRITING') {
+                    updateIELTS({
+                        writing: Math.min(9, ielts.writing + scoreChange),
+                    });
+                } else {
+                    updateIELTS({
+                        speaking: Math.min(9, ielts.speaking + scoreChange),
+                    });
+                }
+
+                gainXp(100);
+                addSummonCharge(30);
+                playSound('LEVEL_UP');
+            }
+        } catch (err) {
+            alert("Grading failed. The Oracle is confused.");
+        } finally {
+            setGrading(false);
         }
     };
 
@@ -183,6 +262,13 @@ const DragonLessons: React.FC = () => {
                     >
                         <Feather size={18} /> GRAMMAR
                     </button>
+                    <button
+                        onClick={() => generateLesson('MOCK')}
+                        disabled={loading}
+                        className={`px-6 py-3 rounded-sm font-bold font-medieval tracking-widest transition-all flex items-center gap-2 border-2 ${mode === 'MOCK' ? 'bg-[#2C1810] text-[#D4AF37] border-[#D4AF37]' : 'bg-[#FDF6E3] text-[#5D4037] border-[#D7C4A1] hover:bg-white'}`}
+                    >
+                        <Brain size={18} /> MOCK EXAM
+                    </button>
                 </div>
             </div>
 
@@ -190,13 +276,14 @@ const DragonLessons: React.FC = () => {
             <div className="flex-1 glass-panel p-8 relative min-h-[400px] flex flex-col items-center justify-center">
                 <div className="absolute inset-0 bg-[#FDF6E3] opacity-40 -z-10" />
 
-                {loading ? (
+                {loading || grading ? (
                     <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        className="text-[#D4AF37]"
+                        className="text-[#D4AF37] flex flex-col items-center gap-4"
                     >
                         <RefreshCw size={64} />
+                        <span className="font-medieval text-xl text-[#2C1810]">{grading ? "The Elders are judging..." : "Consulting the Oracle..."}</span>
                     </motion.div>
                 ) : error ? (
                     <div className="text-center text-red-800">
@@ -233,13 +320,25 @@ const DragonLessons: React.FC = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-auto bg-[#FDF6E3] p-3 rounded-sm border-l-4 border-[#D4AF37]">
+                                                <div className="mt-auto bg-[#FDF6E3] p-3 rounded-sm border-l-4 border-[#D4AF37] mb-3">
                                                     <p className="text-sm text-[#5D4037] font-serif">"{item.example}"</p>
                                                 </div>
+
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        addVocab(item.word, item.definition, 'n', item.example); // Default to 'n' if not provided, or improve parser later
+                                                        playSound('CLICK');
+                                                        alert(`"${item.word}" inscribed in Grimoire!`);
+                                                    }}
+                                                    className="w-full py-2 bg-[#2C1810] text-[#D4AF37] text-xs font-bold uppercase tracking-widest rounded hover:bg-[#3E2723] flex items-center justify-center gap-2"
+                                                >
+                                                    <BookOpen size={14} /> Inscribe
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
-                                ) : (
+                                ) : lesson.mode === 'GRAMMAR' ? (
                                     <div className="max-w-2xl mx-auto bg-white/60 p-8 rounded-lg border-2 border-[#D7C4A1]">
                                         <h2 className="text-3xl font-medieval text-[#2C1810] mb-6 text-center underline decoration-[#D4AF37] decoration-4 underline-offset-4">
                                             {(lesson.content as GrammarPoint).topic}
@@ -257,18 +356,168 @@ const DragonLessons: React.FC = () => {
                                             <p className="font-serif text-xl italic">"{(lesson.content as GrammarPoint).example}"</p>
                                         </div>
                                     </div>
+                                ) : (
+                                    <div className="max-w-3xl mx-auto bg-white/90 p-8 rounded-xl border-2 border-[#D7C4A1] shadow-xl">
+                                        <div className="flex justify-between items-start mb-6 border-b border-[#D7C4A1] pb-4">
+                                            <div>
+                                                <span className="text-xs font-bold text-[#8B4513] uppercase tracking-widest block mb-1">Target Skill</span>
+                                                <div className="flex gap-4">
+                                                    <button
+                                                        onClick={() => setMockType('WRITING')}
+                                                        className={`font-medieval text-xl ${mockType === 'WRITING' ? 'text-[#2C1810] underline decoration-[#D4AF37]' : 'text-slate-400'}`}
+                                                    >
+                                                        WRITING TASK 2
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setMockType('SPEAKING')}
+                                                        className={`font-medieval text-xl ${mockType === 'SPEAKING' ? 'text-[#2C1810] underline decoration-[#D4AF37]' : 'text-slate-400'}`}
+                                                    >
+                                                        SPEAKING PART 2
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {(lesson.content as MockExam).score !== undefined && (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-bold text-[#8B4513] uppercase">Band Score</span>
+                                                    <span className="text-4xl font-bold font-serif text-[#D4AF37] drop-shadow-sm">{(lesson.content as MockExam).score}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="mb-6 bg-[#FDF6E3] p-6 rounded border-l-4 border-[#2C1810]">
+                                            <h3 className="font-bold text-[#2C1810] mb-2 font-serif text-lg">Question:</h3>
+                                            <p className="text-[#5D4037] italic text-lg leading-relaxed">"{(lesson.content as MockExam).question}"</p>
+                                        </div>
+
+                                        {(lesson.content as MockExam).feedback ? (
+                                            <div className="space-y-6 animate-fade-in">
+                                                <div className="bg-emerald-50 p-6 rounded border border-emerald-200">
+                                                    <h3 className="font-bold text-emerald-800 mb-2 flex items-center gap-2">
+                                                        <CheckCircle size={20} /> Examiner Feedback
+                                                    </h3>
+                                                    <p className="text-emerald-900">{(lesson.content as MockExam).feedback}</p>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {(lesson.content as MockExam).tips?.map((tip, i) => (
+                                                        <div key={i} className="bg-white p-3 rounded border border-slate-200 text-sm text-slate-600 font-medium">
+                                                            💡 {tip}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <textarea
+                                                    className="w-full h-48 bg-[#FAFAFA] border border-[#D7C4A1] rounded p-4 text-[#2C1810] font-serif text-lg focus:border-[#D4AF37] outline-none resize-none shadow-inner"
+                                                    placeholder={mockType === 'WRITING' ? "Write your essay here..." : "Transcribe your spoken answer here..."}
+                                                    value={userResponse}
+                                                    onChange={e => setUserResponse(e.target.value)}
+                                                />
+                                                <p className="text-xs text-slate-400 text-right">
+                                                    {mockType === 'WRITING' ? `${userResponse.split(' ').filter(w => w).length} words` : "Speak clearly and transcribe accurately."}
+                                                </p>
+                                                <button
+                                                    onClick={submitMockExam}
+                                                    disabled={grading || !userResponse.trim()}
+                                                    className={`w-full py-4 text-xl font-bold font-medieval tracking-widest rounded transition-all ${!userResponse.trim() ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-[#2C1810] text-[#D4AF37] hover:bg-[#3E2723] shadow-lg'}`}
+                                                >
+                                                    {grading ? 'EVALUATING...' : 'SUBMIT FOR GRADING'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </motion.div>
                         </AnimatePresence>
 
-                        <div className="mt-8 flex justify-center">
-                            <button
-                                onClick={handleComplete}
-                                className="px-8 py-3 bg-[#D4AF37] text-[#2C1810] font-bold font-medieval text-xl rounded shadow-lg border border-[#B08D55] hover:scale-105 transition-transform flex items-center gap-2"
-                            >
-                                <CheckCircle size={24} /> Mark Lesson Complete
-                            </button>
-                        </div>
+                        {/* Quiz Section */}
+                        {showQuiz && lesson.quiz && (
+                            <div className="absolute inset-0 bg-white/95 z-50 flex flex-col items-center justify-center p-8 animate-fade-in">
+                                <h2 className="text-3xl font-medieval text-[#2C1810] mb-8">Knowledge Check</h2>
+
+                                {quizIndex < lesson.quiz.length ? (
+                                    <div className="w-full max-w-2xl">
+                                        <div className="flex justify-between mb-4 text-[#8B4513] font-bold">
+                                            <span>Question {quizIndex + 1}/{lesson.quiz.length}</span>
+                                            <span>Score: {quizScore}</span>
+                                        </div>
+                                        <div className="bg-[#FDF6E3] p-6 rounded-lg border-2 border-[#D7C4A1] mb-6">
+                                            <p className="text-xl text-[#2C1810] font-serif">{lesson.quiz[quizIndex].question}</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {lesson.quiz[quizIndex].options.map((option, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        const isCorrect = idx === lesson.quiz![quizIndex].correctIndex;
+                                                        if (isCorrect) {
+                                                            setQuizScore(s => s + 1);
+                                                            playSound('SUCCESS');
+                                                        } else {
+                                                            playSound('ERROR');
+                                                        }
+
+                                                        if (quizIndex < lesson.quiz!.length - 1) {
+                                                            setQuizIndex(i => i + 1);
+                                                        } else {
+                                                            // Quiz Finished
+                                                            setQuizIndex(i => i + 1);
+                                                            if (isCorrect) handleComplete(true); // Bonus XP
+                                                            else handleComplete(false);
+                                                        }
+                                                    }}
+                                                    className="p-4 bg-white border border-slate-300 rounded hover:bg-[#D4AF37] hover:text-[#2C1810] transition-colors text-left font-serif text-lg text-slate-700"
+                                                >
+                                                    {option}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                        <h3 className="text-2xl font-bold mb-4">Quiz Complete!</h3>
+                                        <p className="text-xl mb-6">You scored {quizScore}/{lesson.quiz.length}</p>
+                                        <button
+                                            onClick={() => {
+                                                setShowQuiz(false);
+                                                setLesson(null); // Return to menu
+                                            }}
+                                            className="px-6 py-2 bg-[#2C1810] text-[#D4AF37] rounded font-bold"
+                                        >
+                                            Return to Academy
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {lesson.mode !== 'MOCK' && !showQuiz && (
+                            <div className="mt-8 flex justify-center gap-4">
+                                <button
+                                    onClick={() => {
+                                        if (lesson.quiz) {
+                                            setShowQuiz(true);
+                                        } else {
+                                            handleComplete();
+                                        }
+                                    }}
+                                    className="px-8 py-3 bg-[#D4AF37] text-[#2C1810] font-bold font-medieval text-xl rounded shadow-lg border border-[#B08D55] hover:scale-105 transition-transform flex items-center gap-2"
+                                >
+                                    <CheckCircle size={24} /> {lesson.quiz ? "Take Quiz & Complete" : "Mark Lesson Complete"}
+                                </button>
+                            </div>
+                        )}
+
+                        {lesson.mode === 'MOCK' && (lesson.content as MockExam).score !== undefined && (
+                            <div className="mt-8 flex justify-center">
+                                <button
+                                    onClick={() => generateLesson('MOCK')} // Reset for new
+                                    className="px-8 py-3 bg-[#2C1810] text-[#D4AF37] font-bold font-medieval text-xl rounded shadow-lg border border-[#B08D55] hover:scale-105 transition-transform flex items-center gap-2"
+                                >
+                                    <RefreshCw size={24} /> Take Another Exam
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="text-center opacity-40">

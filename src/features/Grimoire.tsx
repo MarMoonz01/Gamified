@@ -133,6 +133,11 @@ const Grimoire: React.FC = () => {
                                             <p className="text-fantasy-wood/80 text-sm leading-relaxed border-t border-fantasy-wood/10 pt-2 mt-1">
                                                 {word.meaning}
                                             </p>
+                                            {word.example && (
+                                                <p className="text-fantasy-wood/60 text-xs italic mt-2 bg-black/5 p-2 rounded">
+                                                    "{word.example}"
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 ))

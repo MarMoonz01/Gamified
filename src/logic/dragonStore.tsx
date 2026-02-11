@@ -184,7 +184,7 @@ interface DragonState {
 
     // --- The Grimoire (Vocab) ---
     vocabList: VocabWord[];
-    addVocab: (word: string, meaning: string, type: VocabWord['type']) => void;
+    addVocab: (word: string, meaning: string, type: VocabWord['type'], example?: string) => void;
     practiceVocab: (id: string, success: boolean) => void;
 
     // --- Oracle Deck ---
@@ -220,6 +220,7 @@ export interface VocabWord {
     word: string;
     meaning: string;
     type: 'n' | 'v' | 'adj' | 'adv' | 'phrase';
+    example?: string;
     mastery: number; // 0 (New) -> 5 (Mastered)
     lastPracticed: number;
 }
