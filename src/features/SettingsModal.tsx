@@ -257,4 +257,3 @@ const SettingsModal: React.FC = () => {
 };
 
 export default SettingsModal;
-```
