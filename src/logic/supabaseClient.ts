@@ -11,3 +11,20 @@ export const supabase = (SUPABASE_URL && SUPABASE_KEY)
 
 // Helper to check if configured
 export const isSyncConfigured = () => !!supabase;
+
+export const signInWithGoogle = async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin,
+            queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+            },
+            scopes: 'https://www.googleapis.com/auth/calendar'
+        },
+    });
+    if (error) throw error;
+    return data;
+};

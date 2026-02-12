@@ -1,10 +1,27 @@
 import React, { useState } from 'react';
 import { useDragonStore } from '../logic/dragonStore';
 import type { DaySummary } from '../logic/dragonStore';
-import { CheckCircle, Flame, Target, Trophy, Calendar, Moon, Sparkles } from 'lucide-react';
+import {
+    CheckCircle, Flame, Target, Trophy, Calendar, Moon, Sparkles,
+    Clock, AlertTriangle, ArrowRight
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../logic/GeminiService';
 import { calendarService, type CalendarEvent } from '../logic/calendarService';
+import clsx from 'clsx';
+
+const StatCard: React.FC<{
+    label: string, value: string | number, icon: any, color: string, bg: string, subtext?: string
+}> = ({ label, value, icon: Icon, color, bg, subtext }) => (
+    <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center justify-center gap-2 transition-transform hover:scale-105">
+        <div className={`p-4 rounded-2xl ${bg} ${color} mb-2`}>
+            <Icon size={24} />
+        </div>
+        <div className="text-3xl font-bold text-slate-800">{value}</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</div>
+        {subtext && <div className="text-[10px] text-slate-400 font-medium">{subtext}</div>}
+    </div>
+);
 
 const Dashboard: React.FC = () => {
     const {
@@ -17,9 +34,7 @@ const Dashboard: React.FC = () => {
         dailyHistory,
         schedule,
         generateSchedule,
-
-        updateSchedule,
-        toggleScheduleItem
+        updateSchedule
     } = useDragonStore();
 
     React.useEffect(() => {
@@ -27,8 +42,8 @@ const Dashboard: React.FC = () => {
     }, [schedule.length, generateSchedule]);
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<DaySummary | null>(null);
 
+    // Calendar State
     const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
     const [isCalendarConnected, setIsCalendarConnected] = useState(false);
 
@@ -87,7 +102,7 @@ const Dashboard: React.FC = () => {
 
     const performEndDayAnalysis = async (blockers: string[]) => {
         setIsAnalyzing(true);
-        setIsBlockerModalOpen(false); // Close blocker modal if open
+        setIsBlockerModalOpen(false);
         const result = await geminiService.generateDailyAnalysis(
             userProfile || { name: "Keeper" },
             tasks,
@@ -106,13 +121,21 @@ const Dashboard: React.FC = () => {
                 mood: result.mood,
                 ai_analysis: result.analysis,
                 score: result.score || 0,
-                recommendation_next_day: result.recommendation || "Rest well and prepare for tomorrow.",
+                recommendation_next_day: result.recommendation || "Rest well.",
                 blockers: blockers
             };
             recordDaySummary(summary);
-            setAnalysisResult(summary);
+            alert(`Analysis Complete. Score: ${result.score}`);
         }
         setIsAnalyzing(false);
+    };
+
+    // ... (rest of the file) ...
+
+    const handleBlockerSubmit = () => {
+        if (!blockerInput) return;
+        performEndDayAnalysis([blockerInput]);
+        setBlockerInput("");
     };
 
     const handlePanicSubmit = async () => {
@@ -134,98 +157,66 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    // Timeline Logic
+    const timelineItems = [
+        ...calendarEvents.map(e => ({
+            id: e.id,
+            time: new Date(e.start.dateTime || e.start.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            title: e.summary,
+            type: 'CALENDAR',
+            original: e,
+            details: ''
+        })),
+        ...schedule.map((s, i) => ({
+            id: `sched-${i}`,
+            time: s.time,
+            title: s.activity,
+            type: s.type,
+            details: s.details || ''
+        }))
+    ].sort((a, b) => {
+        return a.time.localeCompare(b.time);
+    });
+
     return (
-        <div className="max-w-4xl mx-auto space-y-8 relative">
-            {/* --- Header Section --- */}
-            <header className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-[#E8EFE8] shadow-sm">
-                <div>
-                    <h1 className="text-3xl font-bold text-[#354F52]">{greeting}, {userProfile?.name || "Keeper"}.</h1>
-                    <p className="text-[#84A98C] mt-1 font-medium">Ready to seize the day?</p>
+        <div className="w-full max-w-5xl mx-auto space-y-8 pb-32">
+            {/* Header Section */}
+            <header className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-4xl font-bold text-slate-800 flex items-center gap-3">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-indigo-400">
+                            {greeting}, {userProfile?.name || "Keeper"}
+                        </span>
+                        <motion.span animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2, repeatDelay: 5 }}>
+                            👋
+                        </motion.span>
+                    </h1>
+                    <p className="text-slate-500 font-medium mt-1 ml-1 flex items-center gap-2">
+                        {isCalendarConnected ? (
+                            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                                <CheckCircle size={12} /> Calendar Synced
+                            </span>
+                        ) : (
+                            <button onClick={handleConnectCalendar} className="text-indigo-600 hover:underline text-xs font-bold flex items-center gap-1">
+                                <Calendar size={12} /> Connect Google Calendar
+                            </button>
+                        )}
+                        <span>•</span>
+                        <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                    </p>
                 </div>
-                <button
-                    onClick={handleEndDay}
-                    disabled={isAnalyzing}
-                    className="flex items-center gap-2 bg-[#52796F] text-white px-6 py-3 rounded-2xl hover:bg-[#354F52] transition-colors shadow-lg hover:shadow-xl disabled:opacity-50"
-                >
-                    {isAnalyzing ? <Sparkles className="animate-spin" /> : <Moon size={20} />}
-                    {isAnalyzing ? "Consulting Stars..." : "End Day & Reflect"}
-                </button>
+                <div className="flex items-center gap-4 relative z-10">
+                    {/* Heat Widget */}
+                    <div className="text-right">
+                        <div className="text-xs text-orange-400 font-bold uppercase tracking-widest">Daily Heat</div>
+                        <div className="text-3xl font-bold text-orange-500 flex items-center justify-end gap-1">
+                            {todayHeat} <Flame size={24} className="fill-orange-500" />
+                        </div>
+                    </div>
+                </div>
+                {/* Background Decor */}
+                <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -z-0 opacity-50" />
             </header>
-
-            {/* Daily Secretary Widget */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-6 rounded-xl shadow-lg border border-slate-200 mb-8 relative overflow-hidden"
-            >
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Calendar size={120} className="text-slate-800" />
-                </div>
-
-                <div className="flex justify-between items-center mb-4 relative z-10">
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <CheckCircle size={20} className="text-amber-600" /> Daily Briefing
-                    </h2>
-                    {!isCalendarConnected && (
-                        <button
-                            onClick={handleConnectCalendar}
-                            className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold hover:bg-blue-200 transition"
-                        >
-                            Sync Google Calendar
-                        </button>
-                    )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-                    {/* Render Calendar Events First (Blocked Time) */}
-                    {calendarEvents.map(event => (
-                        <div
-                            key={event.id}
-                            className="p-4 rounded-lg border-2 border-slate-200 bg-slate-100 opacity-75"
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-slate-300 text-slate-700">
-                                    GOOGLE
-                                </span>
-                                <span className="text-xs font-mono text-slate-500">
-                                    {new Date(event.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                            <div className="font-medium text-slate-500 line-through decoration-slate-400">
-                                {event.summary}
-                            </div>
-                        </div>
-                    ))}
-
-                    {schedule.map(item => (
-                        <div
-                            key={item.id}
-                            onClick={() => toggleScheduleItem(item.id)}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${item.completed ? 'bg-green-50/50 border-green-200 opacity-60' : 'bg-slate-50 border-slate-200 hover:border-amber-400'}`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${item.type === 'STUDY' ? 'bg-blue-100 text-blue-700' :
-                                    item.type === 'HEALTH' ? 'bg-red-100 text-red-700' :
-                                        'bg-amber-100 text-amber-700'
-                                    }`}>{item.type}</span>
-                                <span className="text-xs font-mono text-slate-400">{item.time}</span>
-                            </div>
-                            <div className={`font-medium text-slate-700 ${item.completed ? 'line-through' : ''}`}>
-                                {item.activity}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                    <button
-                        onClick={() => setIsPanicOpen(true)}
-                        className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline uppercase tracking-wider"
-                    >
-                        Request Reschedule (Emergency)
-                    </button>
-                </div>
-            </motion.div>
 
             {/* --- Top Stats Grid --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -255,169 +246,235 @@ const Dashboard: React.FC = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* --- Tasks Column --- */}
-                <section className="widget-card">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-[#354F52] flex items-center gap-2">
-                            <CheckCircle size={24} className="text-[#84A98C]" />
-                            Priority Tasks
-                        </h2>
-                        <span className="text-xs font-bold px-3 py-1 bg-[#E8EFE8] text-[#52796F] rounded-full">
-                            {pendingTasks.length} Remaining
-                        </span>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: The Timeline */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm min-h-[500px] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-2 bg-gradient-to-b from-white to-transparent z-10" />
 
-                    <div className="space-y-3">
-                        {pendingTasks.length === 0 ? (
-                            <div className="text-center py-12 text-[#84A98C] italic">
-                                All stats clear. Enjoy your rest.
+                        <div className="flex justify-between items-center mb-6 relative z-10">
+                            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <Clock className="text-indigo-500" /> Time Stream
+                            </h2>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                {timelineItems.length} Events
                             </div>
-                        ) : (
-                            pendingTasks.slice(0, 5).map(task => (
-                                <motion.div
-                                    key={task.id}
-                                    layoutId={task.id}
-                                    className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-[#F7F9F6] border border-transparent hover:border-[#E8EFE8] transition-all cursor-pointer"
-                                    onClick={() => toggleTask(task.id)}
-                                >
-                                    <div className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? 'bg-[#52796F] border-[#52796F]' : 'border-[#BCCEC0] group-hover:border-[#52796F]'}`}>
-                                        {task.completed && <CheckCircle size={14} className="text-white" />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-base font-bold text-[#354F52] group-hover:text-[#2F3E46] transition-colors leading-tight">
-                                            {task.title}
-                                        </p>
-                                        <div className="flex gap-2 mt-2">
-                                            <span className="text-[10px] uppercase font-bold text-[#84A98C] tracking-wider bg-[#E8EFE8] px-2 py-0.5 rounded-lg">
-                                                {task.type}
-                                            </span>
+                        </div>
+
+                        <div className="space-y-4 relative z-10 px-2">
+                            {/* Vertical Line */}
+                            <div className="absolute left-[4.5rem] top-4 bottom-4 w-0.5 bg-slate-100" />
+
+                            {timelineItems.length === 0 ? (
+                                <div className="text-center py-20 text-slate-400 italic">
+                                    "The scroll is blank. Visit the Morning Ritual to forge your day."
+                                </div>
+                            ) : (
+                                timelineItems.map((item, idx) => (
+                                    <div key={idx} className="relative flex group">
+                                        <div className="w-16 pt-3 text-right text-xs font-bold text-slate-400 font-mono">
+                                            {item.time}
+                                        </div>
+                                        <div className="w-8 flex justify-center pt-2 relative z-10">
+                                            <div className={clsx(
+                                                "w-3 h-3 rounded-full border-2 bg-white transition-colors",
+                                                item.type === 'CALENDAR' ? 'border-blue-400 group-hover:bg-blue-400' :
+                                                    item.type === 'MEAL' ? 'border-orange-400 group-hover:bg-orange-400' :
+                                                        item.type === 'WORK' ? 'border-amber-400 group-hover:bg-amber-400' :
+                                                            'border-indigo-400 group-hover:bg-indigo-400'
+                                            )} />
+                                        </div>
+                                        <div className="flex-1 pb-4">
+                                            <div className={clsx(
+                                                "p-4 rounded-2xl border transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer relative overflow-hidden",
+                                                item.type === 'CALENDAR' ? 'bg-blue-50 border-blue-100 text-blue-900' :
+                                                    item.type === 'MEAL' ? 'bg-orange-50 border-orange-100 text-orange-900' :
+                                                        item.type === 'WORK' ? 'bg-amber-50 border-amber-100 text-amber-900' :
+                                                            'bg-white border-slate-100 text-slate-800'
+                                            )}>
+                                                <div className="font-bold flex justify-between items-start">
+                                                    <span>{item.title}</span>
+                                                    {item.type === 'CALENDAR' && <Calendar size={14} className="opacity-50" />}
+                                                </div>
+                                                {item.details && (
+                                                    <div className="text-xs opacity-70 mt-1 truncate">{item.details}</div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </motion.div>
-                            ))
-                        )}
+                                ))
+                            )}
+                        </div>
                     </div>
-                </section>
+                </div>
 
-                {/* --- Habits / Quick Actions Column --- */}
-                <section className="widget-card">
-                    <h2 className="text-xl font-bold text-[#354F52] mb-6 flex items-center gap-2">
-                        <Calendar size={24} className="text-[#84A98C]" />
-                        Habit Streaks
-                    </h2>
+                {/* Right Column: Panic Button & Tasks */}
+                <div className="space-y-6">
+                    {/* Panic Widget */}
+                    <button
+                        onClick={() => setIsPanicOpen(true)}
+                        className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 p-6 rounded-[32px] flex items-center justify-between group transition-all"
+                    >
+                        <div className="text-left">
+                            <div className="font-bold text-lg">Off Track?</div>
+                            <div className="text-xs opacity-70">Emergency Reschedule</div>
+                        </div>
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                            <AlertTriangle className="fill-rose-500 text-rose-500" />
+                        </div>
+                    </button>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {habits.slice(0, 4).map(habit => (
-                            <button
-                                key={habit.id}
-                                onClick={() => triggerHabit(habit.id)}
-                                className="flex flex-col items-center p-6 rounded-2xl border border-[#E8EFE8] bg-[#F7F9F6] hover:bg-white hover:shadow-md hover:border-[#D8E6D8] transition-all group text-center"
-                            >
-                                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">
-                                    {habit.type === 'HEALTH' ? '🥬' : habit.type === 'STUDY' ? '📖' : '✨'}
+                    {/* Pending Tasks (Dragon Core) */}
+                    <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm flex flex-col max-h-[500px]">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Target className="text-indigo-500" /> Core Objectives
+                        </h3>
+                        <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                            {pendingTasks.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400 text-sm">All clear. Excellent work.</div>
+                            ) : (
+                                pendingTasks.map(task => (
+                                    <div key={task.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer" onClick={() => toggleTask(task.id)}>
+                                        <div className={clsx(
+                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                                            task.completed ? "bg-indigo-500 border-indigo-500" : "border-slate-300"
+                                        )}>
+                                            {task.completed && <CheckCircle size={12} className="text-white" />}
+                                        </div>
+                                        <div>
+                                            <div className={clsx("text-sm font-bold", task.completed ? "text-slate-400 line-through" : "text-slate-700")}>{task.title}</div>
+                                            <div className="text-xs text-slate-400 mt-1">{task.type} • Rank {task.rank}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Habits */}
+                    <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Trophy className="text-amber-500" /> Daily Rituals
+                        </h3>
+                        <div className="space-y-2">
+                            {habits.map(habit => (
+                                <div key={habit.id} className="flex justify-between items-center p-3 hover:bg-amber-50 rounded-xl cursor-pointer transition-colors group" onClick={() => triggerHabit(habit.id)}>
+                                    <span className="text-sm font-bold text-slate-700">{habit.title}</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-xs font-bold text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full group-hover:bg-amber-200 transition-colors">
+                                            🔥 {habit.streak}
+                                        </div>
+                                    </div>
                                 </div>
-                                <span className="text-sm font-bold text-[#354F52] line-clamp-1">
-                                    {habit.title}
-                                </span>
-                                <span className="text-xs text-[#84A98C] mt-1 font-medium">
-                                    {habit.streak} day streak
-                                </span>
-                            </button>
-                        ))}
-                        {habits.length === 0 && (
-                            <div className="col-span-2 text-center text-[#84A98C] text-sm py-4">
-                                No habits tracked. Add some in the Hatchery.
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
-                </section>
+
+                </div>
             </div>
 
-            {/* --- Analysis Modal --- */}
+            {/* End Day Button */}
+            <div className="fixed bottom-6 right-6 z-50">
+                <button
+                    onClick={handleEndDay}
+                    disabled={isAnalyzing}
+                    className="bg-slate-900 text-white px-6 py-4 rounded-full font-bold shadow-xl hover:bg-black hover:scale-105 transition-all flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    {isAnalyzing ? <Sparkles size={18} className="animate-spin" /> : <Moon size={18} />}
+                    {isAnalyzing ? "Analyzing..." : "End Day & Analyze"}
+                </button>
+            </div>
+
+            {/* Panic Modal */}
             <AnimatePresence>
                 {isPanicOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setIsPanicOpen(false)}
+                    >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#2C1810] rounded-xl p-8 max-w-md w-full shadow-2xl border-2 border-red-900/50"
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl"
+                            onClick={e => e.stopPropagation()}
                         >
-                            <div className="flex items-center gap-3 mb-6 text-red-500">
-                                <Flame size={32} className="animate-pulse" />
-                                <h2 className="text-2xl font-medieval text-red-500">Emergency Protocol</h2>
-                            </div>
-
-                            <p className="text-[#D7C4A1] mb-6 text-sm">
-                                "Do not fear chaos, Keeper. Tell me what happened, and I shall weave a new path."
-                            </p>
+                            <h2 className="text-2xl font-bold text-rose-600 mb-2 flex items-center gap-2">
+                                <AlertTriangle /> Panic Mode
+                            </h2>
+                            <p className="text-slate-500 mb-6">"Even the best laid plans falter. Tell me, what has changed?"</p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs text-red-400 font-bold uppercase tracking-widest block mb-2">Time Lost</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">New Available Time</label>
                                     <input
-                                        type="text"
+                                        type="time"
                                         value={panicTime}
                                         onChange={e => setPanicTime(e.target.value)}
-                                        placeholder="e.g. 2 hours, 30 mins"
-                                        className="w-full bg-black/30 border border-red-900/50 rounded-lg p-3 text-[#D7C4A1] focus:border-red-500 outline-none"
+                                        className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500 font-mono"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-red-400 font-bold uppercase tracking-widest block mb-2">Reason</label>
-                                    <input
-                                        type="text"
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Reason for Delay</label>
+                                    <textarea
                                         value={panicReason}
                                         onChange={e => setPanicReason(e.target.value)}
-                                        placeholder="e.g. Overslept, Unexpected Errand"
-                                        className="w-full bg-black/30 border border-red-900/50 rounded-lg p-3 text-[#D7C4A1] focus:border-red-500 outline-none"
+                                        placeholder="e.g. Unexpected meeting, got sick, overslept..."
+                                        className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500 min-h-[100px]"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-8">
+                            <div className="flex justify-end gap-3 mt-8">
                                 <button
                                     onClick={() => setIsPanicOpen(false)}
-                                    className="flex-1 py-3 text-[#8D6E63] hover:text-[#D7C4A1] transition font-bold text-sm"
+                                    className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handlePanicSubmit}
                                     disabled={isReplanning || !panicTime || !panicReason}
-                                    className="flex-[2] bg-red-900/80 hover:bg-red-800 text-red-100 py-3 rounded-lg font-bold shadow-[0_0_15px_rgba(153,27,27,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="bg-rose-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-rose-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                                 >
-                                    {isReplanning ? <Sparkles size={16} className="animate-spin" /> : <Target size={16} />}
-                                    {isReplanning ? "Recalculating..." : "Fix My Day"}
+                                    {isReplanning ? <Sparkles size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                                    {isReplanning ? "Recalculating..." : "Reschedule Now"}
                                 </button>
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
+            </AnimatePresence>
 
-                {/* --- Blocker Modal --- */}
+            {/* Blocker Modal */}
+            <AnimatePresence>
                 {isBlockerModalOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1A2F33] rounded-xl p-8 max-w-md w-full shadow-2xl border-2 border-[#52796F]"
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl"
                         >
-                            <h2 className="text-xl font-bold text-[#E8EFE8] mb-2">Unfinished Business...</h2>
-                            <p className="text-[#84A98C] text-sm mb-6">
-                                "Wisdom comes from understanding our failures. What held you back today?"
-                            </p>
+                            <h2 className="text-2xl font-bold text-slate-800 mb-2">Unfinished Business</h2>
+                            <p className="text-slate-500 mb-6">"Honesty is the first step to improvement. What stood in your way today?"</p>
 
                             <div className="flex flex-wrap gap-2 mb-4">
-                                {COMMON_BLOCKERS.map(reason => (
+                                {COMMON_BLOCKERS.map(b => (
                                     <button
-                                        key={reason}
-                                        onClick={() => setBlockerInput(prev => prev ? `${prev}, ${reason}` : reason)}
-                                        className="text-xs bg-[#2F3E46] text-[#CAD2C5] px-3 py-1.5 rounded-full hover:bg-[#52796F] transition"
+                                        key={b}
+                                        onClick={() => setBlockerInput(b)}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${blockerInput === b ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-indigo-300'}`}
                                     >
-                                        + {reason}
+                                        {b}
                                     </button>
                                 ))}
                             </div>
@@ -425,76 +482,32 @@ const Dashboard: React.FC = () => {
                             <textarea
                                 value={blockerInput}
                                 onChange={e => setBlockerInput(e.target.value)}
-                                placeholder="Describe the obstacle..."
-                                className="w-full bg-[#0F1C20] border border-[#2F3E46] rounded-lg p-3 text-[#E8EFE8] focus:border-[#52796F] outline-none h-24 mb-6"
+                                placeholder="Or describe it yourself..."
+                                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[80px] mb-6"
                             />
 
-                            <div className="flex gap-3">
+                            <div className="flex justify-end gap-3">
                                 <button
-                                    onClick={() => performEndDayAnalysis([])} // Skip/None
-                                    className="flex-1 py-3 text-[#84A98C] hover:text-[#E8EFE8] transition font-bold text-sm"
+                                    onClick={() => performEndDayAnalysis([])} // Skip logic
+                                    className="px-4 py-2 text-slate-400 font-bold hover:text-slate-600 text-sm"
                                 >
-                                    Skip Analysis
+                                    Skip
                                 </button>
                                 <button
-                                    onClick={() => performEndDayAnalysis([blockerInput])}
-                                    disabled={!blockerInput.trim()}
-                                    className="flex-[2] bg-[#52796F] hover:bg-[#354F52] text-white py-3 rounded-lg font-bold shadow-lg disabled:opacity-50"
+                                    onClick={handleBlockerSubmit}
+                                    disabled={!blockerInput}
+                                    className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                                 >
-                                    Submit & Reflect
+                                    Submit & Analyze
                                 </button>
                             </div>
                         </motion.div>
-                    </div>
-                )}
-
-                {analysisResult && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-[32px] p-8 max-w-lg w-full shadow-2xl border border-[#E8EFE8] text-center"
-                        >
-                            <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
-                                🌙
-                            </div>
-                            <h2 className="text-2xl font-bold text-[#354F52] mb-2">Day Complete!</h2>
-                            <p className="text-[#84A98C] font-bold text-sm uppercase tracking-widest mb-6">
-                                Mood: {analysisResult.mood}
-                            </p>
-
-                            <div className="bg-[#F7F9F6] p-6 rounded-2xl text-[#354F52] italic leading-relaxed mb-8">
-                                "{analysisResult.ai_analysis}"
-                            </div>
-
-                            <button
-                                onClick={() => setAnalysisResult(null)}
-                                className="w-full py-3 bg-[#52796F] text-white font-bold rounded-xl hover:bg-[#354F52] transition-all"
-                            >
-                                Rest Well
-                            </button>
-                        </motion.div>
-                    </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
+
         </div>
     );
 };
-
-const StatCard: React.FC<{ label: string, value: number | string, icon: any, color: string, bg?: string, subtext?: string }> = ({ label, value, icon: Icon, color, bg = 'bg-slate-50', subtext }) => (
-    <div className="widget-card flex items-center gap-5">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${bg} ${color}`}>
-            <Icon size={28} />
-        </div>
-        <div>
-            <p className="text-[#84A98C] text-xs font-bold uppercase tracking-wider mb-1">{label}</p>
-            <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-[#354F52]">{typeof value === 'number' ? value.toLocaleString() : value}</span>
-            </div>
-            {subtext && <p className="text-xs text-[#84A98C] opacity-80">{subtext}</p>}
-        </div>
-    </div>
-);
 
 export default Dashboard;

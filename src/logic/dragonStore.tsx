@@ -138,6 +138,7 @@ export interface ScheduleItem {
     activity: string;
     type: 'STUDY' | 'HEALTH' | 'SOCIAL' | 'GOLD';
     completed: boolean;
+    details?: string;
 }
 
 export interface ExamRecord {
