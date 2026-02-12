@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { useDragonStore } from '../logic/dragonStore';
 import { MOCK_EXAMS, type FullMockExam } from '../data/mockExams';
-import { Shield, Clock, AlertTriangle, CheckCircle, ChevronRight, Play } from 'lucide-react';
+import { Shield, Clock, AlertTriangle, CheckCircle, ChevronRight, Play, Upload, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ExamSimulator from './exam/ExamSimulator';
 
 const HallOfRecords: React.FC = () => {
     const { saveExamRecord } = useDragonStore();
     const [selectedExam, setSelectedExam] = useState<FullMockExam | null>(null);
-    const [examState, setExamState] = useState<'IDLE' | 'IN_PROGRESS' | 'COMPLETED'>('IDLE');
+    const [examState, setExamState] = useState<'IDLE' | 'IN_PROGRESS' | 'COMPLETED' | 'CUSTOM_SIM'>('IDLE');
     const [currentSection, setCurrentSection] = useState<'listening' | 'reading' | 'writing' | 'speaking'>('listening');
-    // const [answers, setAnswers] = useState<Record<string, any>>({});
     const [timeLeft, setTimeLeft] = useState(0);
+
+    // Custom Exam State
+    const [customFile, setCustomFile] = useState<File | null>(null);
+    const [customMode, setCustomMode] = useState<'READING' | 'LISTENING' | 'WRITING'>('READING');
 
     const startExam = (exam: FullMockExam) => {
         setSelectedExam(exam);
@@ -67,6 +71,20 @@ const HallOfRecords: React.FC = () => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    if (examState === 'CUSTOM_SIM' && customFile) {
+        return (
+            <ExamSimulator
+                file={customFile}
+                mode={customMode}
+                onFinish={() => {
+                    setExamState('COMPLETED');
+                    // Save record logic here
+                }}
+                onBack={() => setExamState('IDLE')}
+            />
+        );
+    }
+
     if (examState === 'IDLE') {
         return (
             <div className="w-full h-full p-8 overflow-y-auto">
@@ -78,6 +96,59 @@ const HallOfRecords: React.FC = () => {
                         "Prove your worth in the crucible of examination."
                     </p>
                 </header>
+
+                <div className="max-w-6xl mx-auto mb-12">
+                    <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl flex flex-col md:flex-row gap-8 items-center">
+                        <div className="flex-1 space-y-4">
+                            <h2 className="text-2xl font-bold text-fantasy-gold flex items-center gap-2">
+                                <FileText /> Custom Exam Simulator
+                            </h2>
+                            <p className="text-slate-400">
+                                Upload a PDF exam paper (IELTS Cambridge, Mock) and take it in a realistic split-screen environment.
+                            </p>
+
+                            {/* Mode Selection */}
+                            <div className="flex gap-2 bg-slate-900 p-1 rounded-lg w-fit">
+                                {(['READING', 'LISTENING', 'WRITING'] as const).map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setCustomMode(m)}
+                                        className={`px-4 py-2 rounded font-bold text-sm transition-colors ${customMode === m ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="w-full md:w-96">
+                            <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-slate-600 border-dashed rounded-xl cursor-pointer bg-slate-700/50 hover:bg-slate-700 transition-colors group">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-slate-400 group-hover:text-fantasy-gold transition-colors">
+                                    <Upload className="w-10 h-10 mb-3" />
+                                    <p className="mb-2 text-sm font-bold">Click to upload PDF</p>
+                                    <p className="text-xs opacity-70">PDF only (MAX 10MB)</p>
+                                </div>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="application/pdf"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setCustomFile(e.target.files[0]);
+                                            setExamState('CUSTOM_SIM');
+                                        }
+                                    }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-fantasy-wood/30" />
+                    <span className="text-fantasy-wood/50 font-medieval text-sm uppercase tracking-widest">Or Select a Standard Mock</span>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-fantasy-wood/30" />
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {MOCK_EXAMS.map(exam => (

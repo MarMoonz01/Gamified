@@ -102,9 +102,9 @@ const WorldMap: React.FC = () => {
 
                 <LocationPin
                     x={80} y={20}
-                    label="Ancient Library"
+                    label="Hall of Records"
                     icon={Book}
-                    path="/profile" // Placeholder for now
+                    path="/hall-of-records"
                     color="purple"
                     delay={0.4}
                 />

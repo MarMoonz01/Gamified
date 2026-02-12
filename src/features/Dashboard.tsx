@@ -34,7 +34,10 @@ const Dashboard: React.FC = () => {
         dailyHistory,
         schedule,
         generateSchedule,
-        updateSchedule
+        updateSchedule,
+        isOffTrack,
+        setOffTrack,
+        updateTaskStatus
     } = useDragonStore();
 
     React.useEffect(() => {
@@ -60,7 +63,21 @@ const Dashboard: React.FC = () => {
 
     React.useEffect(() => {
         checkCalendarConnection();
-    }, []);
+        // Off-Track Detector
+        const interval = setInterval(() => {
+            const now = new Date();
+            const currentItem = schedule.find(s => {
+                const end = new Date(s.endTime);
+                return now > end && !s.isCompleted;
+            });
+
+            if (currentItem && !isOffTrack) {
+                setOffTrack(true);
+            }
+        }, 60000); // Check every minute
+
+        return () => clearInterval(interval);
+    }, [schedule, isOffTrack, setOffTrack]);
 
     const checkCalendarConnection = async () => {
         const session = await calendarService.getSession();
@@ -155,7 +172,15 @@ const Dashboard: React.FC = () => {
         try {
             const result = await geminiService.replanSchedule(schedule, panicTime, panicReason, userProfile);
             if (result && result.schedule) {
-                updateSchedule(result.schedule);
+                // Map the result carefully to ensure types match if AI returns slightly different keys
+                const newSchedule: any[] = result.schedule.map((s: any) => ({
+                    ...s,
+                    startTime: s.startTime || new Date().toISOString(), // Fallback
+                    endTime: s.endTime || new Date(Date.now() + 3600000).toISOString(),
+                    isCompleted: false
+                }));
+                updateSchedule(newSchedule);
+                setOffTrack(false); // Clear off-track status
                 setIsPanicOpen(false);
                 setPanicTime("");
                 setPanicReason("");
@@ -172,21 +197,26 @@ const Dashboard: React.FC = () => {
     const timelineItems = [
         ...calendarEvents.map(e => ({
             id: e.id,
-            time: new Date(e.start.dateTime || e.start.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            startTime: e.start.dateTime || e.start.date || '',
+            endTime: e.end.dateTime || e.end.date || '',
             title: e.summary,
             type: 'CALENDAR',
             original: e,
-            details: ''
+            details: '',
+            isCompleted: new Date() > new Date(e.end.dateTime || e.end.date || '')
         })),
-        ...schedule.map((s, i) => ({
-            id: `sched - ${i} `,
-            time: s.time,
-            title: s.activity,
+        ...schedule.map((s) => ({
+            id: s.id,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            title: s.title,
             type: s.type,
-            details: s.details || ''
+            details: s.details || '',
+            isCompleted: s.isCompleted,
+            original: s
         }))
     ].sort((a, b) => {
-        return a.time.localeCompare(b.time);
+        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
     });
 
     return (
@@ -290,39 +320,63 @@ const Dashboard: React.FC = () => {
                                     "The scroll is blank. Visit the Morning Ritual to forge your day."
                                 </div>
                             ) : (
-                                timelineItems.map((item, idx) => (
-                                    <div key={idx} className="relative flex group">
-                                        <div className="w-16 pt-3 text-right text-xs font-bold text-slate-400 font-mono">
-                                            {item.time}
-                                        </div>
-                                        <div className="w-8 flex justify-center pt-2 relative z-10">
-                                            <div className={clsx(
-                                                "w-3 h-3 rounded-full border-2 bg-white transition-colors",
-                                                item.type === 'CALENDAR' ? 'border-blue-400 group-hover:bg-blue-400' :
-                                                    item.type === 'MEAL' ? 'border-orange-400 group-hover:bg-orange-400' :
-                                                        item.type === 'WORK' ? 'border-amber-400 group-hover:bg-amber-400' :
-                                                            'border-indigo-400 group-hover:bg-indigo-400'
-                                            )} />
-                                        </div>
-                                        <div className="flex-1 pb-4">
-                                            <div className={clsx(
-                                                "p-4 rounded-2xl border transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer relative overflow-hidden",
-                                                item.type === 'CALENDAR' ? 'bg-slate-50 border-slate-300 text-slate-500' :
-                                                    item.type === 'MEAL' ? 'bg-orange-50 border-orange-100 text-orange-900' :
-                                                        item.type === 'WORK' ? 'bg-amber-50 border-amber-100 text-amber-900' :
-                                                            'bg-white border-slate-100 text-slate-800'
-                                            )}>
-                                                <div className="font-bold flex justify-between items-start">
-                                                    <span>{item.title}</span>
-                                                    {item.type === 'CALENDAR' && <Calendar size={14} className="opacity-50" />}
-                                                </div>
-                                                {item.details && (
-                                                    <div className="text-xs opacity-70 mt-1 truncate">{item.details}</div>
+                                timelineItems.map((item, idx) => {
+                                    const startTime = new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    const endTime = new Date(item.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    const isPast = new Date() > new Date(item.endTime);
+
+                                    return (
+                                        <div key={idx} className={`relative flex group ${isOffTrack && isPast && !item.isCompleted ? 'opacity-100' : 'opacity-100'}`}>
+                                            <div className="w-20 pt-3 text-right text-xs font-bold text-slate-400 font-mono flex flex-col items-end">
+                                                <span>{startTime}</span>
+                                                <span className="text-[10px] opacity-50">{endTime}</span>
+                                            </div>
+                                            <div className="w-8 flex justify-center pt-2 relative z-10">
+                                                <div className={clsx(
+                                                    "w-3 h-3 rounded-full border-2 bg-white transition-colors z-20",
+                                                    item.isCompleted ? "bg-emerald-500 border-emerald-500" :
+                                                        item.type === 'CALENDAR' ? 'border-blue-400 group-hover:bg-blue-400' :
+                                                            item.type === 'MEAL' ? 'border-orange-400 group-hover:bg-orange-400' :
+                                                                item.type === 'WORK' || item.type === 'IELTS' ? 'border-amber-400 group-hover:bg-amber-400' :
+                                                                    'border-indigo-400 group-hover:bg-indigo-400'
+                                                )} />
+                                                {/* Connector Line */}
+                                                {idx < timelineItems.length - 1 && (
+                                                    <div className="absolute top-5 bottom-[-10px] w-0.5 bg-slate-100 -z-10" />
                                                 )}
                                             </div>
+                                            <div className="flex-1 pb-4">
+                                                <div
+                                                    onClick={() => {
+                                                        if (item.type !== 'CALENDAR') {
+                                                            updateTaskStatus(item.id, !item.isCompleted);
+                                                            // If we complete the blocking task, clear off-track? 
+                                                            // Simple logic: if off track and we complete something, strict check runs next minute. 
+                                                            // Or immediate clear if no other blockers? Leave for effect.
+                                                        }
+                                                    }}
+                                                    className={clsx(
+                                                        "p-4 rounded-2xl border transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer relative overflow-hidden",
+                                                        isOffTrack && isPast && !item.isCompleted && item.type !== 'CALENDAR' ? "border-rose-400 bg-rose-50 ring-2 ring-rose-200 animate-pulse" : "",
+                                                        item.isCompleted ? "opacity-60 grayscale bg-slate-50 border-slate-100" :
+                                                            item.type === 'CALENDAR' ? 'bg-slate-50 border-slate-300 text-slate-500' :
+                                                                item.type === 'MEAL' ? 'bg-orange-50 border-orange-100 text-orange-900' :
+                                                                    item.type === 'WORK' || item.type === 'IELTS' ? 'bg-amber-50 border-amber-100 text-amber-900' :
+                                                                        'bg-white border-slate-100 text-slate-800'
+                                                    )}>
+                                                    <div className="font-bold flex justify-between items-start">
+                                                        <span className={item.isCompleted ? "line-through text-slate-400" : ""}>{item.title}</span>
+                                                        {item.isCompleted && <CheckCircle size={14} className="text-emerald-500" />}
+                                                        {item.type === 'CALENDAR' && <Calendar size={14} className="opacity-50" />}
+                                                    </div>
+                                                    {item.details && (
+                                                        <div className="text-xs opacity-70 mt-1 truncate">{item.details}</div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    )
+                                })
                             )}
                         </div>
                     </div>
@@ -333,14 +387,22 @@ const Dashboard: React.FC = () => {
                     {/* Panic Widget */}
                     <button
                         onClick={() => setIsPanicOpen(true)}
-                        className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 p-6 rounded-[32px] flex items-center justify-between group transition-all"
+                        className={clsx(
+                            "w-full p-6 rounded-[32px] flex items-center justify-between group transition-all border",
+                            isOffTrack
+                                ? "bg-rose-100 border-rose-300 text-rose-700 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse"
+                                : "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600"
+                        )}
                     >
                         <div className="text-left">
-                            <div className="font-bold text-lg">Off Track?</div>
-                            <div className="text-xs opacity-70">Emergency Reschedule</div>
+                            <div className="font-bold text-lg">{isOffTrack ? "⚠️ SEVERE DELAYS DETECTED" : "Off Track?"}</div>
+                            <div className="text-xs opacity-70">{isOffTrack ? "Click to Re-Negotiate with Elder Ignis" : "Emergency Reschedule"}</div>
                         </div>
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                            <AlertTriangle className="fill-rose-500 text-rose-500" />
+                        <div className={clsx(
+                            "w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-transform",
+                            isOffTrack ? "bg-rose-500 text-white scale-110" : "bg-white group-hover:scale-110 fill-rose-500 text-rose-500"
+                        )}>
+                            <AlertTriangle className={isOffTrack ? "text-white fill-white" : "fill-rose-500"} />
                         </div>
                     </button>
 

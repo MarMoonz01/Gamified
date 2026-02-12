@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useDragonStore } from '../logic/dragonStore';
-import type { Task } from '../logic/dragonStore';
+import type { Task, ScheduleItem } from '../logic/dragonStore';
 import { geminiService } from '../logic/GeminiService';
 import {
     Sun, Sparkles,
@@ -13,13 +13,6 @@ interface MorningRitualProps {
     onClose: () => void;
 }
 
-interface ScheduleItem {
-    time: string;
-    activity: string;
-    type: 'MEAL' | 'WORK' | 'REST' | 'ROUTINE' | 'EXERCISE';
-    details?: string;
-}
-
 interface Message {
     id: string;
     role: 'user' | 'assistant';
@@ -28,7 +21,7 @@ interface Message {
 }
 
 const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
-    const { addHabit, addTask, userProfile, dailyHistory } = useDragonStore();
+    const { addTask, userProfile, dailyHistory, setSchedule } = useDragonStore();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const [messages, setMessages] = useState<Message[]>([]);
@@ -130,30 +123,25 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     const acceptSchedule = () => {
         if (!currentSchedule) return;
 
-        currentSchedule.forEach(item => {
-            const [hours, minutes] = item.time.split(':').map(Number);
-            const scheduleDate = new Date();
-            scheduleDate.setHours(hours, minutes, 0, 0);
-            const expiresAt = scheduleDate.getTime() + (2 * 60 * 60 * 1000);
+        // Save to Store
+        setSchedule(currentSchedule);
 
-            if (['MEAL', 'REST', 'EXERCISE'].includes(item.type)) {
-                let habitType: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD' = 'HEALTH';
-                if (item.type === 'EXERCISE') habitType = 'HEALTH';
-                addHabit(`[${item.time}] ${item.activity}`, habitType, expiresAt);
+        currentSchedule.forEach(item => {
+            const expiresAt = new Date(item.endTime).getTime();
+
+            if (['MEAL', 'REST', 'EXERCISE', 'LIFE', 'ROUTINE'].includes(item.type)) {
+                // Future: Create habits for tracking?
             } else {
                 let taskType: Task['type'] = 'STUDY';
                 let rank: any = 'C';
 
-                if (item.type === 'ROUTINE') {
-                    taskType = 'GOLD';
-                    rank = 'D';
-                } else if (item.type === 'WORK') {
+                if (item.type === 'WORK' || item.type === 'IELTS') {
                     taskType = 'STUDY';
                     rank = 'A';
                 }
 
                 addTask(
-                    `[${item.time}] ${item.activity}`,
+                    `[${new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}] ${item.title}`,
                     taskType,
                     rank,
                     item.details || "Elder Ignis Plan",
@@ -232,10 +220,10 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
                                                 {msg.scheduleProposal.schedule.map((item, idx) => (
                                                     <div key={idx} className="p-3 flex items-center gap-4 hover:bg-[#FAFAFA]">
                                                         <span className="flex-shrink-0 w-16 text-xs font-bold text-[#D4AF37] bg-[#2C1810] px-2 py-1 rounded text-center">
-                                                            {item.time}
+                                                            {new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-bold text-[#5D4037] truncate">{item.activity}</p>
+                                                            <p className="text-sm font-bold text-[#5D4037] truncate">{item.title}</p>
                                                             {item.details && <p className="text-xs text-[#8D6E63] truncate">{item.details}</p>}
                                                         </div>
                                                         <div>{getIcon(item.type)}</div>

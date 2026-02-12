@@ -197,15 +197,27 @@ class GeminiService {
             - Adapt to the user's current mood (${mood}).
             
             Generate:
-            1. Detailed Schedule (Time, Activity, Type, Details) - Start from ${currentTime}.
+            1. Detailed Schedule (Start Time, End Time, Title, Type, Details) - Start from ${currentTime}.
             2. "Secretary's Note": Explain WHY you adjusted the schedule this way (The Rationale).
             3. A motivational Quote.
 
             Return JSON only:
             {
                 "schedule": [
-                    { "time": "14:00", "activity": "IELTS Reading", "type": "WORK", "details": "Passage 1 Focus" },
-                    { "time": "15:30", "activity": "Walk", "type": "EXERCISE", "details": "Light cardio" }
+                    { 
+                        "startTime": "2023-10-27T14:00:00.000Z", 
+                        "endTime": "2023-10-27T15:30:00.000Z", 
+                        "title": "IELTS Reading", 
+                        "type": "IELTS", 
+                        "details": "Passage 1 Focus" 
+                    },
+                    { 
+                        "startTime": "2023-10-27T15:30:00.000Z", 
+                        "endTime": "2023-10-27T16:00:00.000Z", 
+                        "title": "Walk", 
+                        "type": "EXERCISE", 
+                        "details": "Light cardio" 
+                    }
                 ],
                 "quote": "...",
                 "rationale": "I noticed you worked hard yesterday, so..."
@@ -267,7 +279,9 @@ class GeminiService {
             
             Return JSON only:
             {
-                "schedule": [ ...updated schedule array... ],
+                "schedule": [ 
+                    { "startTime": "...", "endTime": "...", "title": "...", "type": "...", "details": "..." }
+                ],
                 "rationale": "I have adjusted the schedule to..."
             }
         `;
@@ -297,10 +311,40 @@ class GeminiService {
             
             Return JSON only:
             {
-                "schedule": [ ...updated schedule array... ],
+                "schedule": [ 
+                     { "startTime": "...", "endTime": "...", "title": "...", "type": "...", "details": "..." }
+                ],
                 "rationale": "I've compressed your reading session and removed the game break to get you back on track."
             }
         `;
+        return this.generateJSON(prompt);
+    }
+    async evaluateWriting(topic: string, essay: string): Promise<{ score: number, feedback: string[], betterVersion: string, keyChanges: string[] } | null> {
+        const prompt = `Act as a Strict IELTS Examiner. Grade this Task 2 essay.
+        Topic: "${topic}"
+        Essay: "${essay}"
+        
+        Provide:
+        1. Band Score (0-9).
+        2. Strict Feedback (Grammar, Cohesion, Vocabulary, Task Response).
+        3. A Band 9.0 Verified Rewrite of the user's essay. Fix all errors and elevate the vocabulary.
+        4. Key Changes: Explain 3 major improvements made in the rewrite.
+
+        Return JSON only: {
+            "score": 6.5,
+            "feedback": ["Weak conclusion", "Repetitive vocabulary 'good'", "Grammar error in paragraph 2"],
+            "betterVersion": "The provided essay.... (Full Band 9 Rewrite)",
+            "keyChanges": ["Changed 'good' to 'optimal'", "Added clear thesis statement", "Improved transition words"]
+        }`;
+        return this.generateJSON(prompt);
+    }
+    async fetchDefinition(word: string): Promise<{ definition: string; type: 'n' | 'v' | 'adj' | 'adv' | 'phrase'; example: string } | null> {
+        const prompt = `Define the word "${word}" for an IELTS student.
+        Return JSON only: {
+            "definition": "Clear, concise definition (max 15 words).",
+            "type": "n" or "v" or "adj" or "adv" or "phrase",
+            "example": "A sentence using the word naturally."
+        }`;
         return this.generateJSON(prompt);
     }
 }

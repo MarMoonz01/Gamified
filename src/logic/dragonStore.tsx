@@ -134,10 +134,11 @@ export interface Daily {
 
 export interface ScheduleItem {
     id: string;
-    time: string; // "08:00"
-    activity: string;
-    type: 'STUDY' | 'HEALTH' | 'SOCIAL' | 'GOLD';
-    completed: boolean;
+    title: string;
+    startTime: string; // ISO string
+    endTime: string;   // ISO string
+    type: 'IELTS' | 'LIFE' | 'EVENT' | 'WORK' | 'REST' | 'ROUTINE' | 'EXERCISE'; // Expanded types
+    isCompleted: boolean;
     details?: string;
 }
 
@@ -188,7 +189,11 @@ interface DragonState {
     userProfile: UserProfile | null;
     dailyHistory: DaySummary[];
     schedule: ScheduleItem[];
+    isOffTrack: boolean;
     generateSchedule: () => void;
+    setSchedule: (items: ScheduleItem[]) => void;
+    updateTaskStatus: (id: string, isCompleted: boolean) => void;
+    setOffTrack: (status: boolean) => void;
     updateSchedule: (newSchedule: ScheduleItem[]) => void;
     rescheduleDay: () => void;
     toggleScheduleItem: (id: string) => void;
@@ -408,26 +413,32 @@ export const useDragonStore = create<DragonState>()(
             userProfile: null,
             dailyHistory: [],
             schedule: [],
+            isOffTrack: false,
 
             generateSchedule: () => set({
                 // Placeholder generator logic - in real app would use AI
                 schedule: [
-                    { id: uuidv4(), time: '08:00', activity: 'Morning Review', type: 'STUDY', completed: false },
-                    { id: uuidv4(), time: '12:00', activity: 'Vocabulary Lunch', type: 'STUDY', completed: false },
-                    { id: uuidv4(), time: '18:00', activity: 'Evening Workout', type: 'HEALTH', completed: false },
-                    { id: uuidv4(), time: '20:00', activity: 'Writing Forge', type: 'STUDY', completed: false },
+                    { id: uuidv4(), title: 'Morning Review', startTime: new Date().toISOString(), endTime: new Date(Date.now() + 3600000).toISOString(), type: 'IELTS', isCompleted: false },
                 ]
             }),
+
+            setSchedule: (items) => set({ schedule: items }),
+
+            updateTaskStatus: (id, isCompleted) => set(state => ({
+                schedule: state.schedule.map(s => s.id === id ? { ...s, isCompleted } : s)
+            })),
+
+            setOffTrack: (status) => set({ isOffTrack: status }),
 
             updateSchedule: (newSchedule) => set({ schedule: newSchedule }),
 
             rescheduleDay: () => set(state => ({
-                // Panic Button: Reduce to essential
-                schedule: state.schedule.slice(0, 2).map(s => ({ ...s, activity: s.activity + ' (Short)' })) // Simple mock
+                // Panic Button: Reduce to essential (Mock)
+                schedule: state.schedule // No-op mock for now, handled by AI later
             })),
 
             toggleScheduleItem: (id) => set(state => ({
-                schedule: state.schedule.map(s => s.id === id ? { ...s, completed: !s.completed } : s)
+                schedule: state.schedule.map(s => s.id === id ? { ...s, isCompleted: !s.isCompleted } : s)
             })),
 
             updateProfile: (profile) => set(prev => ({

@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { BookOpen, Highlighter, ArrowLeft } from 'lucide-react'; // Add ArrowLeft
+import { BookOpen, Highlighter, ArrowLeft, PlusCircle, Loader } from 'lucide-react';
+import { useDragonStore } from '../../logic/dragonStore';
+import { geminiService } from '../../logic/GeminiService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ReadingDojoProps {
     onBack: () => void;
 }
 
 const ReadingDojo: React.FC<ReadingDojoProps> = ({ onBack }) => {
+    const { addVocab } = useDragonStore(state => ({ addVocab: state.addVocab }));
     const [highlightMode, setHighlightMode] = useState(false);
-    const [selectedText, setSelectedText] = useState<string[]>([]);
+    const [selectionState, setSelectionState] = useState<{ text: string; top: number; left: number } | null>(null);
+    const [loadingDef, setLoadingDef] = useState(false);
 
     // Mock Data
     const passage = `
@@ -29,19 +34,65 @@ const ReadingDojo: React.FC<ReadingDojoProps> = ({ onBack }) => {
     const [answers, setAnswers] = useState<Record<number, number>>({});
 
     const handleTextSelection = () => {
-        if (!highlightMode) return;
         const selection = window.getSelection();
-        if (selection && selection.toString().trim()) {
-            setSelectedText([...selectedText, selection.toString()]);
-            // In a real app, complex text node manipulation is needed. 
-            // Here we just store strings for "notes".
+        if (selection && selection.toString().trim().length > 0) {
+            const text = selection.toString().trim();
+            if (text.length > 30) return; // Ignore long selections
+
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+
+            // Adjust for container scroll/offset if needed, but fixed position is easier for popper
+            setSelectionState({
+                text,
+                top: rect.top,
+                left: rect.left + (rect.width / 2)
+            });
+        } else {
+            setSelectionState(null);
+        }
+    };
+
+    const addToGrimoire = async () => {
+        if (!selectionState) return;
+        setLoadingDef(true);
+        try {
+            const def = await geminiService.fetchDefinition(selectionState.text);
+            if (def) {
+                addVocab(selectionState.text, def.definition, def.type, def.example);
+                // playSound('WRITE');
+                alert(`Added "${selectionState.text}" to Grimoire!`); // Replace with toast later
+                setSelectionState(null);
+                window.getSelection()?.removeAllRanges();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingDef(false);
         }
     };
 
     return (
-        <div className="w-full h-full p-4 flex gap-4 max-w-7xl mx-auto">
+        <div className="w-full h-full p-4 flex gap-4 max-w-7xl mx-auto relative" onClick={() => setSelectionState(null)}>
+            {/* Popover */}
+            <AnimatePresence>
+                {selectionState && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        animate={{ opacity: 1, y: -50, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        style={{ top: selectionState.top, left: selectionState.left }}
+                        className="fixed z-50 -translate-x-1/2 bg-slate-900 text-white p-2 rounded-lg shadow-xl border border-fantasy-gold flex items-center gap-2 pointer-events-auto cursor-pointer hover:bg-slate-800"
+                        onClick={(e) => { e.stopPropagation(); addToGrimoire(); }}
+                    >
+                        {loadingDef ? <Loader className="animate-spin" size={16} /> : <PlusCircle size={16} className="text-fantasy-gold" />}
+                        <span className="font-bold text-sm whitespace-nowrap">Add to Grimoire</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Left: Passage */}
-            <div className="flex-1 h-full flex flex-col">
+            <div className="flex-1 h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <header className="flex justify-between items-center mb-8 border-b-2 border-[#D4AF37] pb-4">
                     <h1 className="text-4xl font-medieval text-[#2C1810] flex items-center gap-3">
@@ -50,15 +101,18 @@ const ReadingDojo: React.FC<ReadingDojoProps> = ({ onBack }) => {
                         </button>
                         <BookOpen size={40} className="text-[#D4AF37]" />
                         The Grand Library
-                    </h1>    <button
+                    </h1>
+
+                    <button
                         onClick={() => setHighlightMode(!highlightMode)}
-                        className={`p - 2 rounded ${highlightMode ? 'bg-yellow-400 text-black shadow-lg' : 'bg-fantasy-wood/10 text-fantasy-wood-dark'} `}
+                        className={`p-2 rounded flex items-center gap-2 transition-colors ${highlightMode ? 'bg-yellow-400 text-black shadow-lg' : 'bg-fantasy-wood/10 text-fantasy-wood-dark'}`}
                     >
                         <Highlighter size={16} /> {highlightMode ? 'HIGHLIGHTER ON' : 'HIGHLIGHT'}
                     </button>
                 </header>
+
                 <div
-                    className="flex-1 bg-fantasy-paper p-8 overflow-y-auto font-serif text-lg leading-loose text-fantasy-wood-dark shadow-inner text-justify"
+                    className="flex-1 bg-fantasy-paper p-8 overflow-y-auto font-serif text-lg leading-loose text-fantasy-wood-dark shadow-inner text-justify relative"
                     onMouseUp={handleTextSelection}
                 >
                     {passage}
@@ -80,7 +134,7 @@ const ReadingDojo: React.FC<ReadingDojoProps> = ({ onBack }) => {
                                     <label key={idx} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-black/5 rounded">
                                         <input
                                             type="radio"
-                                            name={`q - ${q.id} `}
+                                            name={`q-${q.id}`}
                                             checked={answers[q.id] === idx}
                                             onChange={() => setAnswers({ ...answers, [q.id]: idx })}
                                             className="accent-fantasy-gold w-4 h-4"

@@ -9,18 +9,26 @@ import ListeningDojo from './dojos/ListeningDojo';
 
 type LessonMode = 'VOCAB' | 'GRAMMAR' | 'WRITING' | 'SPEAKING' | 'READING' | 'LISTENING' | null;
 
+import { useNavigate } from 'react-router-dom';
+
 const DragonLessons: React.FC = () => {
-    useDragonStore(); // Keep hook if needed for future, or remove if truly unused. 
-    // Actually, if I remove the destructuring, I might as well remove the call if it does nothing. 
-    // But maybe I should keep it to ensure store is initialized or just remove it to be clean.
+    useDragonStore();
+    const navigate = useNavigate();
     const [selectedMode, setSelectedMode] = useState<LessonMode>(null);
 
     // Menu Item Component
-    const MenuItem = ({ mode, title, icon: Icon, color, desc, locked }: any) => (
+    const MenuItem = ({ mode, title, icon: Icon, color, desc, locked, path }: any) => (
         <motion.button
             whileHover={!locked ? { scale: 1.02, x: 5 } : {}}
             whileTap={!locked ? { scale: 0.98 } : {}}
-            onClick={() => !locked && setSelectedMode(mode)}
+            onClick={() => {
+                if (locked) return;
+                if (path) {
+                    navigate(path);
+                } else {
+                    setSelectedMode(mode);
+                }
+            }}
             className={`w-full p-6 text-left rounded-xl border-2 transition-all group relative overflow-hidden ${locked
                 ? 'bg-slate-100 border-slate-200 opacity-70 cursor-not-allowed grayscale'
                 : 'bg-white border-slate-200 hover:border-indigo-500 hover:shadow-md'
@@ -85,7 +93,16 @@ const DragonLessons: React.FC = () => {
                 </p>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto pb-12">
+                {/* Hall of Records (New) */}
+                <MenuItem
+                    title="The Hall of Records"
+                    icon={Trophy}
+                    color="slate"
+                    desc="Full Mock Exams and Past Simulations."
+                    path="/hall-of-records"
+                />
+
                 <MenuItem
                     mode="WRITING"
                     title="The Iron Forge"
@@ -122,14 +139,6 @@ const DragonLessons: React.FC = () => {
                     icon={Star}
                     color="purple"
                     desc="Enhance your vocabulary arsenal."
-                    locked={true}
-                />
-                <MenuItem
-                    mode="GRAMMAR"
-                    title="Syntax Structure"
-                    icon={Trophy}
-                    color="cyan"
-                    desc="Perfect your sentence construction."
                     locked={true}
                 />
             </div>
