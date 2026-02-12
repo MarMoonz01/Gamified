@@ -81,11 +81,11 @@ const SpeakingDojo: React.FC<SpeakingDojoProps> = ({ onBack }) => {
             recognitionRef.current.interimResults = true;
 
             recognitionRef.current.onresult = (event: any) => {
-                let inter = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    inter += event.results[i][0].transcript;
+                let currentTranscript = '';
+                for (let i = 0; i < event.results.length; ++i) {
+                    currentTranscript += event.results[i][0].transcript;
                 }
-                setTranscript(inter);
+                setTranscript(currentTranscript);
             };
 
             recognitionRef.current.start();

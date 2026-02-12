@@ -52,6 +52,17 @@ const HallOfRecords: React.FC = () => {
         };
 
         saveExamRecord(mockScores, `Mock Exam: ${selectedExam?.title}`);
+
+        // Connect to Egg system: Add Heat based on performance
+        const totalScore = mockScores.overall;
+        const heatBonus = Math.round(totalScore * 50); // e.g., 7.0 * 50 = 350 Heat
+
+        const { addHeat } = useDragonStore.getState();
+        addHeat(heatBonus, 'IELTS_MOCK_EXAM');
+        addHeat(heatBonus / 4, 'IELTS_READING');
+        addHeat(heatBonus / 4, 'IELTS_LISTENING');
+        addHeat(heatBonus / 4, 'IELTS_WRITING');
+        addHeat(heatBonus / 4, 'IELTS_SPEAKING');
     };
 
     // Timer Effect

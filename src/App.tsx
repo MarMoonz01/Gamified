@@ -48,7 +48,7 @@ const useNotifications = () => {
     if (starvingDragon) {
       new Notification("Elder Ignis", {
         body: `${starvingDragon.name} is growing weak from neglect... Return to the sanctuary!`,
-        icon: '/dragon-icon.png' // Placeholder
+        icon: '/vite.svg'
       });
       lastNotifiedRef.current = now;
       return;
@@ -58,21 +58,18 @@ const useNotifications = () => {
     if (activeEgg?.isReadyToHatch) {
       new Notification("Elder Ignis", {
         body: "The Egg trembles! A new life is ready to emerge.",
-        icon: '/egg-icon.png'
+        icon: '/vite.svg'
       });
       lastNotifiedRef.current = now;
     }
-
-    // 3. Check Daily Reset
-    const { checkDailyReset } = useDragonStore();
-    useEffect(() => {
-      checkDailyReset();
-      // Optional: Check every minute if the day has changed while app is open
-      const interval = setInterval(checkDailyReset, 60000);
-      return () => clearInterval(interval);
-    }, [checkDailyReset]);
-
   }, [dragons, activeEgg]);
+
+  const { checkDailyReset } = useDragonStore();
+  useEffect(() => {
+    checkDailyReset();
+    const interval = setInterval(checkDailyReset, 60000);
+    return () => clearInterval(interval);
+  }, [checkDailyReset]);
 };
 
 function App() {
