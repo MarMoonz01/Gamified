@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDragonStore } from '../../logic/dragonStore';
 import { geminiService } from '../../logic/GeminiService';
-import { motion } from 'framer-motion';
 import { PenTool, Clock, CheckCircle, Flame, Sword, RefreshCw, ArrowLeft, BookOpen, GitCompare } from 'lucide-react';
 import { useSound } from '../../logic/soundStore';
 import Parchment from '../../components/ui/Parchment';
