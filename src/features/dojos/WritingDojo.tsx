@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDragonStore } from '../../logic/dragonStore';
 import { geminiService } from '../../logic/GeminiService';
 import { motion } from 'framer-motion';
-import { PenTool, Clock, CheckCircle, Flame, Sword, Save, RefreshCw } from 'lucide-react';
+import { PenTool, Clock, CheckCircle, Flame, Sword, RefreshCw } from 'lucide-react';
 import { useSound } from '../../logic/soundStore';
 import Parchment from '../../components/ui/Parchment';
 
@@ -26,7 +26,7 @@ const WritingDojo: React.FC = () => {
     });
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setTimeout>;
         if (isTimerRunning) {
             interval = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
         }

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDragonStore } from '../logic/dragonStore';
-import type { Task, DaySummary } from '../logic/dragonStore';
+import type { Task } from '../logic/dragonStore';
 import { geminiService } from '../logic/GeminiService';
 import {
     Sun, Battery, BatteryCharging, Zap, Sparkles,
-    Dumbbell, Utensils, Clock, Coffee, Scroll, ChevronRight, Send, User, Bot
+    Dumbbell, Utensils, Clock, Coffee, Scroll, Send, User, Bot
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -38,15 +38,6 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [currentSchedule, setCurrentSchedule] = useState<ScheduleItem[] | null>(null);
-    const [yesterday, setYesterday] = useState<DaySummary | null>(null);
-
-    useEffect(() => {
-        if (dailyHistory && dailyHistory.length > 0) {
-            const lastEntry = dailyHistory[dailyHistory.length - 1];
-            // setYesterday(lastEntry); // Optional: Re-enable if briefing is desired
-            // setStep('BRIEFING');
-        }
-    }, [dailyHistory]);
 
     // Scroll to bottom
     useEffect(() => {
@@ -256,8 +247,8 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
 
                                         <div className={`max-w-[80%] space-y-4`}>
                                             <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                                    ? 'bg-[#5D4037] text-[#EDE0C8] rounded-tr-none'
-                                                    : 'bg-white border border-[#D7C4A1] text-[#2C1810] rounded-tl-none'
+                                                ? 'bg-[#5D4037] text-[#EDE0C8] rounded-tr-none'
+                                                : 'bg-white border border-[#D7C4A1] text-[#2C1810] rounded-tl-none'
                                                 }`}>
                                                 {msg.content}
                                             </div>

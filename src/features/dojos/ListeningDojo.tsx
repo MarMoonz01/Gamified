@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useDragonStore } from '../../logic/dragonStore';
-import { Play, Pause, FastForward, Rewind, FileText, Save } from 'lucide-react';
+import { Play, Pause, FastForward, Rewind, FileText } from 'lucide-react';
 
 const ListeningDojo: React.FC = () => {
-    const { gainXp } = useDragonStore();
     const [isPlaying, setIsPlaying] = useState(false);
     const [speed, setSpeed] = useState(1.0);
     const [notes, setNotes] = useState('');
 
     // Mock Audio Time
-    const [currentTime, setCurrentTime] = useState(0);
+    const [currentTime] = useState(0);
     const duration = 1800; // 30 mins
 
     const togglePlay = () => setIsPlaying(!isPlaying);

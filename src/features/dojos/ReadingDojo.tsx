@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { useDragonStore } from '../../logic/dragonStore';
-import { BookOpen, CheckCircle, Highlighter, Split } from 'lucide-react';
-import Parchment from '../../components/ui/Parchment';
+import { BookOpen, Highlighter } from 'lucide-react';
 
 const ReadingDojo: React.FC = () => {
-    const { gainXp } = useDragonStore();
     const [highlightMode, setHighlightMode] = useState(false);
     const [selectedText, setSelectedText] = useState<string[]>([]);
 

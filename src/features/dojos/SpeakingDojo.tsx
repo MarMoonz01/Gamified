@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDragonStore } from '../../logic/dragonStore';
 import { geminiService } from '../../logic/GeminiService';
 import { motion } from 'framer-motion';
-import { Mic, Volume2, AlertTriangle, RefreshCw, Play, Square } from 'lucide-react';
+import { Mic, AlertTriangle, RefreshCw, Square } from 'lucide-react';
 import { useSound } from '../../logic/soundStore';
 
 const SpeakingDojo: React.FC = () => {
@@ -17,11 +17,11 @@ const SpeakingDojo: React.FC = () => {
     const [volume, setVolume] = useState(0);
 
     const recognitionRef = useRef<any>(null);
-    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Audio Visualization Mock
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setTimeout>;
         if (isRecording) {
             interval = setInterval(() => {
                 // Mock volume fluctuation
