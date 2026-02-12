@@ -63,6 +63,15 @@ const useNotifications = () => {
       lastNotifiedRef.current = now;
     }
 
+    // 3. Check Daily Reset
+    const { checkDailyReset } = useDragonStore();
+    useEffect(() => {
+      checkDailyReset();
+      // Optional: Check every minute if the day has changed while app is open
+      const interval = setInterval(checkDailyReset, 60000);
+      return () => clearInterval(interval);
+    }, [checkDailyReset]);
+
   }, [dragons, activeEgg]);
 };
 
