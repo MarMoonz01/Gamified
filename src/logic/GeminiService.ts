@@ -178,11 +178,13 @@ class GeminiService {
         mood: string,
         recentHistory: any[],
         userProfile: any,
-        currentTime: string
+        currentTimeISO: string,
+        localTimeString: string
     ): Promise<{ schedule: any[], quote: string, rationale: string } | null> {
         const prompt = `
             Acting as Elder Ignis (Secretary), plan today's schedule.
-            Current Time: ${currentTime}
+            Current Reference Time (ISO): ${currentTimeISO}
+            Current Local Time: ${localTimeString}
             User Mood: ${mood}
             
             User Profile:
@@ -192,35 +194,29 @@ class GeminiService {
             ${JSON.stringify(recentHistory)}
             
             Logic:
-            - If yesterday was successful (high score), increase difficulty slightly (Progressive Overload).
-            - If yesterday failed/burnout, focus on recovery and easy wins today.
+            - Start the schedule from the provided Current Reference Time (${currentTimeISO}).
+            - All "startTime" and "endTime" MUST be in full ISO 8601 format (e.g., "2026-02-12T15:00:00.000Z").
+            - Ensure the YEAR is 2026 (or matching the provided date).
             - Adapt to the user's current mood (${mood}).
             
             Generate:
-            1. Detailed Schedule (Start Time, End Time, Title, Type, Details) - Start from ${currentTime}.
-            2. "Secretary's Note": Explain WHY you adjusted the schedule this way (The Rationale).
+            1. Detailed Schedule (Start Time, End Time, Title, Type, Details).
+            2. "Secretary's Note": Explain WHY you adjusted the schedule this way.
             3. A motivational Quote.
 
             Return JSON only:
             {
                 "schedule": [
                     { 
-                        "startTime": "2023-10-27T14:00:00.000Z", 
-                        "endTime": "2023-10-27T15:30:00.000Z", 
+                        "startTime": "2026-02-12T16:00:00.000Z", 
+                        "endTime": "2026-02-12T17:30:00.000Z", 
                         "title": "IELTS Reading", 
                         "type": "IELTS", 
                         "details": "Passage 1 Focus" 
-                    },
-                    { 
-                        "startTime": "2023-10-27T15:30:00.000Z", 
-                        "endTime": "2023-10-27T16:00:00.000Z", 
-                        "title": "Walk", 
-                        "type": "EXERCISE", 
-                        "details": "Light cardio" 
                     }
                 ],
                 "quote": "...",
-                "rationale": "I noticed you worked hard yesterday, so..."
+                "rationale": "..."
             }
         `;
         return this.generateJSON(prompt);
@@ -261,8 +257,9 @@ class GeminiService {
     ): Promise<{ schedule: any[], rationale: string } | null> {
         const prompt = `
             Act as Elder Ignis (Wise Secretary). The user wants to adjust the schedule.
+            Current Day Context: ${new Date().toLocaleDateString()}
             
-            Current Schedule:
+            Current Schedule (ISO format):
             ${JSON.stringify(currentSchedule)}
             
             User Profile:
@@ -272,17 +269,17 @@ class GeminiService {
             "${userFeedback}"
             
             Rules:
-            1. Respect the user's energy levels (if they say they are tired, reduce load).
-            2. Maintain IELTS study blocks but potentially shorten or move them if requested.
-            3. Do NOT delete everything unless asked. Modify existing blocks.
+            1. Respect the user's energy levels.
+            2. All times MUST be in valid ISO 8601 format.
+            3. Maintain consistent dates with the existing schedule.
             4. Keep the tone helpful and cooperative.
             
             Return JSON only:
             {
                 "schedule": [ 
-                    { "startTime": "...", "endTime": "...", "title": "...", "type": "...", "details": "..." }
+                    { "startTime": "2026-02-12T16:00:00.000Z", "endTime": "2026-02-12T17:00:00.000Z", "title": "...", "type": "...", "details": "..." }
                 ],
-                "rationale": "I have adjusted the schedule to..."
+                "rationale": "..."
             }
         `;
         return this.generateJSON(prompt);
@@ -293,28 +290,29 @@ class GeminiService {
         reason: string,
         userProfile: any
     ): Promise<{ schedule: any[], rationale: string } | null> {
+        const now = new Date();
         const prompt = `
             Act as Elder Ignis (Crisis Manager). The user is in PANIC MODE. 
             They have lost ${lostTime} due to: "${reason}".
+            Current Moment (ISO): ${now.toISOString()}
             
-            Current Scheduled Items (some may be past due):
+            Current Scheduled Items:
             ${JSON.stringify(currentSchedule)}
             
             User Profile:
             ${JSON.stringify(userProfile)}
 
-            Rules for Emergency Replanning:
+            Rules:
             1. SHIFT the schedule forward or COMPRESS less critical tasks.
-            2. PROTECT "Work" and "Study" blocks (IELTS) if possible, but shorten them if necessary.
-            3. DROP "Social", "Gold", or "Routine" tasks if needed to save time.
-            4. START the new schedule NOW.
+            2. All timestamps MUST be ISO 8601 strings.
+            3. START the new schedule from the Current Moment (${now.toISOString()}).
             
             Return JSON only:
             {
                 "schedule": [ 
-                     { "startTime": "...", "endTime": "...", "title": "...", "type": "...", "details": "..." }
+                     { "startTime": "2026-02-12T18:00:00.000Z", "endTime": "2026-02-12T19:00:00.000Z", "title": "...", "type": "...", "details": "..." }
                 ],
-                "rationale": "I've compressed your reading session and removed the game break to get you back on track."
+                "rationale": "..."
             }
         `;
         return this.generateJSON(prompt);

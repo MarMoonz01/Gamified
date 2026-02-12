@@ -47,18 +47,25 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         setIsLoading(true);
 
         const now = new Date();
-        const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const currentTimeISO = now.toISOString();
+        const localTimeString = now.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
         const recentHistory = dailyHistory.slice(-3);
 
         try {
-            // Initial Generation - Pass "NEUTRAL" as default mood since we removed selection
-            // Or better, change generatePersonalizedSchedule to accept an optional mood or just context.
-            // For now, I'll pass 'NEUTRAL' but the prompt could be adjusted to "The user is starting their day."
             const result = await geminiService.generatePersonalizedSchedule(
                 'NEUTRAL',
                 recentHistory,
                 userProfile || { name: 'Keeper' },
-                currentTime
+                currentTimeISO,
+                localTimeString
             );
 
             if (result) {
@@ -127,7 +134,9 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         setSchedule(currentSchedule);
 
         currentSchedule.forEach(item => {
-            const expiresAt = new Date(item.endTime).getTime();
+            const startTime = new Date(item.startTime);
+            const endTime = new Date(item.endTime);
+            const expiresAt = endTime.getTime();
 
             if (['MEAL', 'REST', 'EXERCISE', 'LIFE', 'ROUTINE'].includes(item.type)) {
                 // Future: Create habits for tracking?
@@ -141,7 +150,7 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
                 }
 
                 addTask(
-                    `[${new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}] ${item.title}`,
+                    `[${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}] ${item.title}`,
                     taskType,
                     rank,
                     item.details || "Elder Ignis Plan",
@@ -220,7 +229,7 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
                                                 {msg.scheduleProposal.schedule.map((item, idx) => (
                                                     <div key={idx} className="p-3 flex items-center gap-4 hover:bg-[#FAFAFA]">
                                                         <span className="flex-shrink-0 w-16 text-xs font-bold text-[#D4AF37] bg-[#2C1810] px-2 py-1 rounded text-center">
-                                                            {new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            {new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                                         </span>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-bold text-[#5D4037] truncate">{item.title}</p>
