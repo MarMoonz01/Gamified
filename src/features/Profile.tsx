@@ -100,24 +100,24 @@ const Profile: React.FC = () => {
         <div className="h-full w-full overflow-y-auto pr-2 custom-scrollbar">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
 
-                {/* Left Column: Hunter Card */}
+                {/* Left Column: Keeper Card */}
                 <div className="lg:col-span-1 space-y-6">
-                    {/* Hunter License Card */}
+                    {/* Keeper License Card */}
                     <div className="relative group perspective-1000">
                         <motion.div
                             initial={{ rotateY: 90, opacity: 0 }}
                             animate={{ rotateY: 0, opacity: 1 }}
                             transition={{ duration: 0.8 }}
-                            className="bg-gradient-to-br from-[#1a1a1a] to-[#2C1810] rounded-xl overflow-hidden shadow-2xl border-2 border-[#D4AF37] relative"
+                            className="bg-fantasy-paper-light rounded-xl overflow-hidden shadow-2xl border-4 border-[#8B4513] relative"
                         >
-                            {/* Holographic Overlay */}
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-amber-500/10" />
+                            {/* Paper Texture */}
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')] opacity-50 mix-blend-multiply" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#8B4513]/20 via-transparent to-transparent" />
 
                             <div className="p-6 relative z-10 text-center text-[#D4AF37]">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="text-xs font-mono opacity-60">HUNTER LICENSE</div>
-                                    <Crown size={18} className="text-[#D4AF37]" />
+                                    <div className="text-xs font-fantasy text-[#8B4513] opacity-80 uppercase tracking-widest">KEEPER LICENSE</div>
+                                    <Crown size={18} className="text-[#8B4513]" />
                                 </div>
 
                                 <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#D4AF37] bg-black/50 flex items-center justify-center mb-4 shadow-[0_0_20px_#D4AF3777] overflow-hidden">
@@ -142,39 +142,39 @@ const Profile: React.FC = () => {
                                         <button onClick={() => setIsEditingName(false)} className="text-red-400"><X size={16} /></button>
                                     </div>
                                 ) : (
-                                    <h2 className="text-2xl font-medieval tracking-widest text-white mb-1 flex items-center justify-center gap-2 group-hover:text-[#FDF6E3] transition">
+                                    <h2 className="text-2xl font-medieval tracking-widest text-[#5C4033] mb-1 flex items-center justify-center gap-2 group-hover:text-[#3E2723] transition">
                                         {playerName || "Dragon Keeper"}
                                         <button onClick={() => setIsEditingName(true)} className="opacity-0 group-hover:opacity-100 transition text-[#D4AF37]/50 hover:text-[#D4AF37]"><Edit2 size={14} /></button>
                                     </h2>
                                 )}
 
-                                <div className="text-xs font-mono font-bold text-[#D4AF37] tracking-[0.3em] uppercase mb-6">{title}</div>
+                                <div className="text-xs font-fantasy font-bold text-[#8B4513] tracking-[0.3em] uppercase mb-6">{title}</div>
 
-                                <div className="grid grid-cols-2 gap-2 text-left bg-black/30 p-3 rounded-lg border border-[#D4AF37]/30">
+                                <div className="grid grid-cols-2 gap-2 text-left bg-[#F5DEB3]/50 p-3 rounded-lg border border-[#8B4513]/30">
                                     <div>
-                                        <div className="text-[9px] text-amber-500/60 uppercase">Rank</div>
-                                        <div className="font-medieval text-lg text-white">{rank}</div>
+                                        <div className="text-[9px] text-[#8B4513]/60 uppercase font-bold">Rank</div>
+                                        <div className="font-medieval text-lg text-[#3E2723]">{rank}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-amber-500/60 uppercase">Total Level</div>
-                                        <div className="font-mono text-lg text-white">{totalLevel}</div>
+                                        <div className="text-[9px] text-[#8B4513]/60 uppercase font-bold">Level</div>
+                                        <div className="font-medieval text-lg text-[#3E2723]">{totalLevel}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-amber-500/60 uppercase">Dragons</div>
-                                        <div className="font-mono text-lg text-blue-300">{dragons.length}</div>
+                                        <div className="text-[9px] text-[#8B4513]/60 uppercase font-bold">Dragons</div>
+                                        <div className="font-medieval text-lg text-blue-800">{dragons.length}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-amber-500/60 uppercase">Essence</div>
-                                        <div className="font-mono text-lg text-purple-300">{essence}</div>
+                                        <div className="text-[9px] text-[#8B4513]/60 uppercase font-bold">Essence</div>
+                                        <div className="font-medieval text-lg text-purple-800">{essence}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Barcode visual */}
-                            <div className="h-4 bg-black flex items-center justify-center gap-1 opacity-50 mt-2">
-                                {Array.from({ length: 20 }).map((_, i) => (
-                                    <div key={i} className={`h-full w-${Math.random() > 0.5 ? '1' : '0.5'} bg-[#D4AF37]`} />
-                                ))}
+                            {/* Seal visual */}
+                            <div className="flex justify-center mt-4 opacity-80">
+                                <div className="w-16 h-16 rounded-full border-2 border-[#8B4513] flex items-center justify-center">
+                                    <div className="text-[#8B4513] font-medieval text-xs text-center leading-none">OFFICIAL<br />SEAL</div>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

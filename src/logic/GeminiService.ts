@@ -138,25 +138,78 @@ class GeminiService {
             return `Error: ${error.message}`;
         }
     }
-    async generateDailyAnalysis(profile: any, tasks: any[], habits: any[], totalHeat: number): Promise<{ analysis: string, mood: string } | null> {
+    async generateDailyAnalysis(profile: any, tasks: any[], habits: any[], totalHeat: number, blockers?: string[], recentHistory?: any[]): Promise<{ analysis: string, mood: string, score: number, recommendation: string } | null> {
         const prompt = `
         You are Elder Ignis, a wise dragon mentor. Analyze the Keeper's daily performance.
         
         Keeper Profile: ${JSON.stringify(profile)}
         Detailed Activity:
-        - Completed Tasks: ${tasks.filter(t => t.completed).map((t: any) => t.title).join(', ')}
-        - Pending Tasks: ${tasks.filter(t => !t.completed).map((t: any) => t.title).join(', ')}
+        - Completed Tasks: ${tasks.filter((t: any) => t.completed).map((t: any) => t.title).join(', ')}
+        - Pending Tasks: ${tasks.filter((t: any) => !t.completed).map((t: any) => t.title).join(', ')}
         - Habit Streaks: ${habits.map((h: any) => `${h.title} (${h.streak})`).join(', ')}
         - Total Heat Generated Today: ${totalHeat}
+        - Main Blockers (Why tasks were incomplete): ${blockers?.join(', ') || "None reported"}
+        
+        Recent History (Last 7 Days):
+        ${JSON.stringify(recentHistory?.map(h => ({ date: h.date, blockers: h.blockers, score: h.score })) || [])}
 
-        Provide a brief, encouraging, but honest summary of their day (max 3 sentences).
-        Also assess their "mood" or "vibe" as a single word (e.g., Productive, Lazy, Balanced, burnout).
+        Trend Analysis Rules:
+        - If "Distracted" appears as a blocker > 2 times in history, recommend "Focus Dojo".
+        - If "Tired" appears frequently, recommend "Sleep Dojo" or rest.
+
+        Provide:
+        1. Analysis: A brief, encouraging, but honest summary (max 3 sentences).
+        2. Mood: A single word for their vibe (e.g., Productive, Lazy, Balanced, Burnout).
+        3. Score: A 0-100 score based on completion rate and heat.
+        4. Recommendation: A specific piece of advice for TOMORROW (e.g., "Sleep early tonight", "Focus on Reading tomorrow").
 
         Return JSON only:
         {
-            "analysis": "Your analysis string here...",
-            "mood": "OneWordMood"
+            "analysis": "Your analysis string...",
+            "mood": "OneWordMood",
+            "score": 85,
+            "recommendation": "Your recommendation for tomorrow..."
         }
+        `;
+        return this.generateJSON(prompt);
+    }
+
+    async generatePersonalizedSchedule(
+        mood: string,
+        recentHistory: any[],
+        userProfile: any,
+        currentTime: string
+    ): Promise<{ schedule: any[], quote: string, rationale: string } | null> {
+        const prompt = `
+            Acting as Elder Ignis (Secretary), plan today's schedule.
+            Current Time: ${currentTime}
+            User Mood: ${mood}
+            
+            User Profile:
+            ${JSON.stringify(userProfile)}
+
+            Recent History (Last 3 Days):
+            ${JSON.stringify(recentHistory)}
+            
+            Logic:
+            - If yesterday was successful (high score), increase difficulty slightly (Progressive Overload).
+            - If yesterday failed/burnout, focus on recovery and easy wins today.
+            - Adapt to the user's current mood (${mood}).
+            
+            Generate:
+            1. Detailed Schedule (Time, Activity, Type, Details) - Start from ${currentTime}.
+            2. "Secretary's Note": Explain WHY you adjusted the schedule this way (The Rationale).
+            3. A motivational Quote.
+
+            Return JSON only:
+            {
+                "schedule": [
+                    { "time": "14:00", "activity": "IELTS Reading", "type": "WORK", "details": "Passage 1 Focus" },
+                    { "time": "15:30", "activity": "Walk", "type": "EXERCISE", "details": "Light cardio" }
+                ],
+                "quote": "...",
+                "rationale": "I noticed you worked hard yesterday, so..."
+            }
         `;
         return this.generateJSON(prompt);
     }
@@ -188,6 +241,67 @@ class GeminiService {
             console.error("Failed to generate rewards", e);
             return null;
         }
+    }
+    async negotiateSchedule(
+        currentSchedule: any[],
+        userFeedback: string,
+        userProfile: any
+    ): Promise<{ schedule: any[], rationale: string } | null> {
+        const prompt = `
+            Act as Elder Ignis (Wise Secretary). The user wants to adjust the schedule.
+            
+            Current Schedule:
+            ${JSON.stringify(currentSchedule)}
+            
+            User Profile:
+            ${JSON.stringify(userProfile)}
+            
+            User's Feedback/Request:
+            "${userFeedback}"
+            
+            Rules:
+            1. Respect the user's energy levels (if they say they are tired, reduce load).
+            2. Maintain IELTS study blocks but potentially shorten or move them if requested.
+            3. Do NOT delete everything unless asked. Modify existing blocks.
+            4. Keep the tone helpful and cooperative.
+            
+            Return JSON only:
+            {
+                "schedule": [ ...updated schedule array... ],
+                "rationale": "I have adjusted the schedule to..."
+            }
+        `;
+        return this.generateJSON(prompt);
+    }
+    async replanSchedule(
+        currentSchedule: any[],
+        lostTime: string,
+        reason: string,
+        userProfile: any
+    ): Promise<{ schedule: any[], rationale: string } | null> {
+        const prompt = `
+            Act as Elder Ignis (Crisis Manager). The user is in PANIC MODE. 
+            They have lost ${lostTime} due to: "${reason}".
+            
+            Current Scheduled Items (some may be past due):
+            ${JSON.stringify(currentSchedule)}
+            
+            User Profile:
+            ${JSON.stringify(userProfile)}
+
+            Rules for Emergency Replanning:
+            1. SHIFT the schedule forward or COMPRESS less critical tasks.
+            2. PROTECT "Work" and "Study" blocks (IELTS) if possible, but shorten them if necessary.
+            3. DROP "Social", "Gold", or "Routine" tasks if needed to save time.
+            4. START the new schedule NOW.
+            
+            Return JSON only:
+            {
+                "schedule": [ ...updated schedule array... ],
+                "rationale": "I've compressed your reading session and removed the game break to get you back on track."
+            }
+        `;
+        return this.generateJSON(prompt);
     }
 }
 

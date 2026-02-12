@@ -44,7 +44,7 @@ interface LessonData {
 
 const DragonLessons: React.FC = () => {
     const { playSound } = useSound();
-    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg, ielts, updateIELTS, addVocab } = useDragonStore(); // Unified store usage
+    const { gainXp, summonCharge, addSummonCharge, habits, activeEgg, ielts, updateIELTS, addVocab, submitExamResult } = useDragonStore(); // Unified store usage
 
     const [mode, setMode] = useState<LessonMode>('VOCAB');
     const [mockType, setMockType] = useState<'WRITING' | 'SPEAKING'>('WRITING');
@@ -190,9 +190,15 @@ const DragonLessons: React.FC = () => {
         playSound('CLICK');
 
         const mockContent = lesson.content as MockExam;
-        const prompt = `Grade this IELTS ${mockContent.type} response based on official criteria (0-9 Band).
+        const prompt = `Act as a Strict IELTS Examiner. Grade this ${mockContent.type} response based on official public band descriptors (0-9 Band).
         Question: "${mockContent.question}"
         Response: "${userResponse}"
+        
+        Provide:
+        1. Score: Precise Band Score (e.g., 6.5, 7.0).
+        2. Feedback: Constructive criticism on Lexical Resource, Grammatical Range, etc.
+        3. Tips: 3 Actionable tips to improve.
+
         Return ONLY a JSON object with keys: { score: number, feedback: "Short summary", tips: ["Tip 1", "Tip 2", "Tip 3"] }.`;
 
         try {
@@ -201,16 +207,11 @@ const DragonLessons: React.FC = () => {
                 const updatedContent = { ...mockContent, ...result };
                 setLesson({ ...lesson, content: updatedContent });
 
-                // Update Store
-                const scoreChange = result.score >= 7 ? 0.2 : 0.1;
+                // Update Store with Strict Grading
                 if (mockContent.type === 'WRITING') {
-                    updateIELTS({
-                        writing: Math.min(9, ielts.writing + scoreChange),
-                    });
+                    submitExamResult('WRITING', result.score);
                 } else {
-                    updateIELTS({
-                        speaking: Math.min(9, ielts.speaking + scoreChange),
-                    });
+                    submitExamResult('SPEAKING', result.score);
                 }
 
                 gainXp(100);

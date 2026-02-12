@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
 import { Plus, Scroll } from 'lucide-react';
 import { useDragonStore } from '../logic/dragonStore';
-import { useAgentStore } from '../logic/agentStore';
+
 import DailyItem from './DailyItem';
 import PresetSelector from './PresetSelector';
 import Parchment from './ui/Parchment';
 
 const DailyColumn: React.FC = () => {
     const { dailies, addDaily } = useDragonStore();
-    const { triggerMessage } = useAgentStore();
+
     const [showPresets, setShowPresets] = useState(false);
 
     const handleSelect = (label: string) => {
         addDaily(label);
-        triggerMessage('IGRIS', 'TASK_COMPLETE');
     };
 
     return (

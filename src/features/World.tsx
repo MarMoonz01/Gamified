@@ -93,7 +93,7 @@ const WorldMap: React.FC = () => {
 
                 <LocationPin
                     x={75} y={60}
-                    label="Dungeon Gates"
+                    label="Dragon Lairs"
                     icon={Skull}
                     path="/dungeon"
                     color="red"

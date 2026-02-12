@@ -1,25 +1,25 @@
 import React from 'react';
 import { Skull, Map } from 'lucide-react';
 import { useDragonStore, type Rank } from '../logic/dragonStore';
-import { useAgentStore } from '../logic/agentStore';
+
 import TodoItem from './TodoItem';
 import Parchment from './ui/Parchment';
 
 const DungeonColumn: React.FC = () => {
     const { tasks: todos, addTask: addTodo } = useDragonStore();
-    const { triggerMessage } = useAgentStore();
+
 
     const generateDungeon = () => {
-        const adjectives = ['Haunted', 'Cursed', 'Abyssal', 'Frozen', 'Burning', 'Toxic', 'Shadow'];
-        const nouns = ['Library', 'Gym', 'Server Room', 'Catacombs', 'Spire', 'Void', 'Gate'];
+        const adjectives = ['Haunted', 'Cursed', 'Abyssal', 'Frozen', 'Burning', 'Toxic', 'Mystic'];
+        const nouns = ['Library', 'Gym', 'Server Room', 'Catacombs', 'Spire', 'Void', 'Lair'];
         const randomTitle = `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
 
         const ranks: Rank[] = ['E', 'D', 'C', 'B', 'A', 'S'];
         const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
 
         // @ts-ignore - Temporary ignore until store update
-        addTodo(randomTitle, 'GOLD', randomRank, "A mysterious gate has appeared. Clear it to obtain rewards.");
-        triggerMessage('BERU', 'GREETING');
+        addTodo(randomTitle, 'GOLD', randomRank, "A hidden scroll has been discovered. Complete it to obtain rewards.");
+
     };
 
     return (

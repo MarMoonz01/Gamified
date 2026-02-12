@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDragonStore } from '../logic/dragonStore';
-import type { Task } from '../logic/dragonStore';
+import type { Task, DaySummary } from '../logic/dragonStore';
 import { geminiService } from '../logic/GeminiService';
 import {
     Sun, Battery, BatteryCharging, Zap, Sparkles,
-    Dumbbell, Utensils, Clock, Coffee
+    Dumbbell, Utensils, Clock, Coffee, Scroll, ChevronRight, Send, User, Bot
 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface MorningRitualProps {
     onClose: () => void;
@@ -14,7 +15,6 @@ interface MorningRitualProps {
 
 type Mood = 'TIRED' | 'NEUTRAL' | 'ENERGETIC';
 
-// โครงสร้างข้อมูลสำหรับตารางเวลาจาก AI
 interface ScheduleItem {
     time: string;
     activity: string;
@@ -22,94 +22,130 @@ interface ScheduleItem {
     details?: string;
 }
 
+interface Message {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    scheduleProposal?: { schedule: ScheduleItem[], rationale: string };
+}
+
 const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
-    // ดึง tasks เดิมมาด้วย เพื่อเอามาต่อท้าย (Append) ไม่ให้ของเก่าหาย
     const { addHabit, addTask, userProfile, dailyHistory } = useDragonStore();
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const [step, setStep] = useState<'MOOD' | 'GENERATING' | 'RESULT'>('MOOD');
-    const [aiResponse, setAiResponse] = useState<{ quote: string, schedule: ScheduleItem[] } | null>(null);
+    const [step, setStep] = useState<'BRIEFING' | 'MOOD' | 'CHAT'>('MOOD');
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentSchedule, setCurrentSchedule] = useState<ScheduleItem[] | null>(null);
+    const [yesterday, setYesterday] = useState<DaySummary | null>(null);
 
-    const generateSchedule = async (selectedMood: Mood) => {
-        setStep('GENERATING');
+    useEffect(() => {
+        if (dailyHistory && dailyHistory.length > 0) {
+            const lastEntry = dailyHistory[dailyHistory.length - 1];
+            // setYesterday(lastEntry); // Optional: Re-enable if briefing is desired
+            // setStep('BRIEFING');
+        }
+    }, [dailyHistory]);
+
+    // Scroll to bottom
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const startChat = async (selectedMood: Mood) => {
+        setStep('CHAT');
+        setIsLoading(true);
+
+        const initialUserMsg: Message = { id: uuidv4(), role: 'user', content: `I'm feeling ${selectedMood.toLowerCase()} today.` };
+        setMessages([initialUserMsg]);
 
         const now = new Date();
         const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-        // Get recent history (last 3 entries)
         const recentHistory = dailyHistory.slice(-3);
 
-        const prompt = `
-            You are Elder Ignis, a wise dragon strategist acting as a personal secretary.
-            The current time is ${currentTime}.
-            The user is feeling ${selectedMood}.
-            
-            User Profile:
-            ${JSON.stringify(userProfile || { name: 'Keeper', age: 25, weight: 60, gender: 'Not Specified' })}
-
-            Recent Performance (Last 3 Days):
-            ${JSON.stringify(recentHistory)}
-            
-            Design a "Daily Battle Plan" (Itinerary) for the REST of the day (until sleep).
-            
-            CRITICAL INSTRUCTIONS:
-            1. Start the schedule from ${currentTime}.
-            2. CREATE A BALANCED MIX of:
-               - IELTS Study (Reading/Listening/Writing/Speaking - be specific, e.g., "IELTS Reading Passage 1")
-               - Physical Health (Exercise/Stretching/Walk - adapted to feeling ${selectedMood} and their Weight/Age)
-               - Meals & Rest
-            3. PERSONALIZATION:
-               - If they are heavier, suggest lower impact cardio if they are tired.
-               - If they had high heat recently (Burnout risk?), suggest more breaks.
-               - If they had low heat recently (Lazy?), push them slightly harder.
-            4. If user is TIRED, focus on recovery and light study. 
-            5. If ENERGETIC, push for high-intensity study and workout.
-            
-            Return JSON only:
-            {
-                "schedule": [
-                    { "time": "14:00", "activity": "IELTS Reading: Passage 1", "type": "WORK", "details": "Focus on T/F/NG questions" },
-                    { "time": "15:30", "activity": "Light Stretching", "type": "EXERCISE", "details": "Relieve back tension" },
-                    { "time": "18:00", "activity": "Dragon Feast (Dinner)", "type": "MEAL" }
-                ],
-                "quote": "A fiery motivational quote tailored to the mood and their recent performance."
-            }
-        `;
-
         try {
-            const result = await geminiService.generateJSON<{ schedule: ScheduleItem[], quote: string }>(prompt);
+            // Initial Generation
+            const result = await geminiService.generatePersonalizedSchedule(
+                selectedMood,
+                recentHistory,
+                userProfile || { name: 'Keeper' },
+                currentTime
+            );
+
             if (result) {
-                setAiResponse(result);
-                setStep('RESULT');
-            } else {
-                setStep('MOOD');
-                alert("Elder Ignis is silent... (Check API Key)");
+                const aiMsg: Message = {
+                    id: uuidv4(),
+                    role: 'assistant',
+                    content: result.quote,
+                    scheduleProposal: {
+                        schedule: result.schedule,
+                        rationale: result.rationale
+                    }
+                };
+                setCurrentSchedule(result.schedule);
+                setMessages(prev => [...prev, aiMsg]);
             }
         } catch (error) {
             console.error(error);
-            setStep('MOOD');
+            setMessages(prev => [...prev, { id: uuidv4(), role: 'assistant', content: "My connection to the stars is weak... Please try again." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        if (!inputValue.trim() || isLoading) return;
+
+        const userMsg: Message = { id: uuidv4(), role: 'user', content: inputValue };
+        setMessages(prev => [...prev, userMsg]);
+        setInputValue('');
+        setIsLoading(true);
+
+        try {
+            // Negotiation Logic
+            const result = await geminiService.negotiateSchedule(
+                currentSchedule || [],
+                userMsg.content,
+                userProfile || { name: 'Keeper' }
+            );
+
+            if (result) {
+                const aiMsg: Message = {
+                    id: uuidv4(),
+                    role: 'assistant',
+                    content: result.rationale || "I've adjusted the plan.",
+                    scheduleProposal: {
+                        schedule: result.schedule,
+                        rationale: result.rationale
+                    }
+                };
+                setCurrentSchedule(result.schedule);
+                setMessages(prev => [...prev, aiMsg]);
+            } else {
+                setMessages(prev => [...prev, { id: uuidv4(), role: 'assistant', content: "I couldn't quite catch that. Could you rephrase?" }]);
+            }
+        } catch (error) {
+            setMessages(prev => [...prev, { id: uuidv4(), role: 'assistant', content: "The threads of fate are tangled. I cannot adjust the plan right now." }]);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const acceptSchedule = () => {
-        if (!aiResponse) return;
+        if (!currentSchedule) return;
 
-        aiResponse.schedule.forEach(item => {
-            // Parse Time for Expiration (Window: 2 Hours)
+        currentSchedule.forEach(item => {
             const [hours, minutes] = item.time.split(':').map(Number);
             const scheduleDate = new Date();
             scheduleDate.setHours(hours, minutes, 0, 0);
-
-            // Expiration = Schedule Time + 2 Hours
             const expiresAt = scheduleDate.getTime() + (2 * 60 * 60 * 1000);
 
-            // Logic: Meals/Exercise/Rest -> Habits
             if (['MEAL', 'REST', 'EXERCISE'].includes(item.type)) {
                 let habitType: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD' = 'HEALTH';
                 if (item.type === 'EXERCISE') habitType = 'HEALTH';
-
                 addHabit(`[${item.time}] ${item.activity}`, habitType, expiresAt);
             } else {
-                // WORK / ROUTINE -> Task
                 let taskType: Task['type'] = 'STUDY';
                 let rank: any = 'C';
 
@@ -134,7 +170,6 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         onClose();
     };
 
-    // Helper เลือกไอคอน
     const getIcon = (type: string) => {
         switch (type) {
             case 'MEAL': return <Utensils size={16} className="text-orange-500" />;
@@ -152,111 +187,157 @@ const MorningRitual: React.FC<MorningRitualProps> = ({ onClose }) => {
         >
             <motion.div
                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
-                className="bg-[#FDF6E3] w-full max-w-lg rounded-xl shadow-2xl border-2 border-[#8B4513] overflow-hidden flex flex-col max-h-[85vh]"
+                className="bg-[#FDF6E3] w-full max-w-2xl rounded-xl shadow-2xl border-2 border-[#8B4513] overflow-hidden flex flex-col h-[85vh]"
             >
                 {/* Header */}
-                <div className="bg-[#2C1810] p-4 flex justify-between items-center bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+                <div className="bg-[#2C1810] p-4 flex justify-between items-center bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-amber-500 border-2 border-[#D4AF37] flex items-center justify-center">
                             <Sun className="text-[#2C1810]" />
                         </div>
                         <div>
                             <h2 className="font-medieval text-xl text-[#D4AF37]">Daily Strategist</h2>
-                            <p className="text-xs text-amber-300/60 uppercase tracking-widest">Elder Ignis Planning</p>
+                            <p className="text-xs text-amber-300/60 uppercase tracking-widest">Elder Ignis Negotiation</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-[#D7C4A1] hover:text-white">✕</button>
                 </div>
 
-                {/* Content */}
-                <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#FDF6E3] space-y-6">
                     <AnimatePresence mode="wait">
-                        {step === 'MOOD' && (
-                            <motion.div key="mood" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
-                                <h3 className="text-2xl font-medieval text-[#2C1810] text-center">Current Status?</h3>
-                                <p className="text-center text-[#5D4037] text-sm italic">
-                                    "Tell me your state, and I shall craft a plan for the rest of this day."
-                                </p>
-                                <div className="grid grid-cols-1 gap-4">
-                                    <button onClick={() => generateSchedule('TIRED')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
-                                        <div className="p-3 bg-slate-200 rounded-full"><Battery size={24} className="text-slate-600" /></div>
-                                        <div className="text-left">
-                                            <span className="font-bold text-[#5D4037] block">Low Battery</span>
-                                            <span className="text-xs text-[#8D6E63]">Focus on recovery & light tasks</span>
-                                        </div>
-                                    </button>
-                                    <button onClick={() => generateSchedule('NEUTRAL')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
-                                        <div className="p-3 bg-blue-100 rounded-full"><BatteryCharging size={24} className="text-blue-600" /></div>
-                                        <div className="text-left">
-                                            <span className="font-bold text-[#5D4037] block">Balanced</span>
-                                            <span className="text-xs text-[#8D6E63]">Standard progression speed</span>
-                                        </div>
-                                    </button>
-                                    <button onClick={() => generateSchedule('ENERGETIC')} className="p-4 border-2 border-[#D7C4A1] rounded-lg hover:bg-amber-50 flex items-center gap-4 transition-all group">
-                                        <div className="p-3 bg-amber-100 rounded-full"><Zap size={24} className="text-amber-600" /></div>
-                                        <div className="text-left">
-                                            <span className="font-bold text-[#5D4037] block">Overcharged</span>
-                                            <span className="text-xs text-[#8D6E63]">Maximum intensity & gains</span>
-                                        </div>
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {step === 'GENERATING' && (
-                            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-64 text-center space-y-4">
-                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-                                    <Sparkles size={48} className="text-[#D4AF37]" />
-                                </motion.div>
-                                <h3 className="text-xl font-medieval text-[#2C1810]">Elder Ignis is strategizing...</h3>
-                            </motion.div>
-                        )}
-
-                        {step === 'RESULT' && aiResponse && (
-                            <motion.div key="result" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6 pb-4">
-                                <div className="bg-[#2C1810]/5 p-4 rounded-lg border border-[#D7C4A1] italic text-center font-serif text-[#5D4037] text-sm">
-                                    "{aiResponse.quote}"
+                        {step === 'MOOD' ? (
+                            <motion.div
+                                key="mood"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="h-full flex flex-col items-center justify-center space-y-8"
+                            >
+                                <div className="text-center space-y-2">
+                                    <h3 className="text-3xl font-medieval text-[#2C1810]">How flows your energy?</h3>
+                                    <p className="text-[#5D4037] italic">"The stars await your command, Keeper."</p>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="relative border-l-2 border-[#D4AF37] ml-4 space-y-6 py-2">
-                                        {aiResponse.schedule.map((item, idx) => (
-                                            <div key={idx} className="relative pl-6">
-                                                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#FDF6E3] border-2 border-[#D4AF37] flex items-center justify-center">
-                                                    <div className="w-2 h-2 rounded-full bg-[#2C1810]"></div>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-[#D4AF37] bg-[#2C1810] px-2 py-0.5 rounded w-fit mb-1 shadow-sm">
-                                                        {item.time}
-                                                    </span>
-                                                    <div className="flex items-start gap-2">
-                                                        <div className="mt-1">{getIcon(item.type)}</div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-bold text-[#5D4037]">{item.activity}</span>
-                                                            {item.details && (
-                                                                <span className="text-xs text-[#8D6E63] italic">{item.details}</span>
-                                                            )}
-                                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-xl">
+                                    {[
+                                        { id: 'TIRED', label: 'Low Tide', icon: Battery, desc: 'Recovery Focus', color: 'bg-slate-200 text-slate-700' },
+                                        { id: 'NEUTRAL', label: 'Steady Flow', icon: BatteryCharging, desc: 'Balanced Growth', color: 'bg-blue-100 text-blue-700' },
+                                        { id: 'ENERGETIC', label: 'Raging Fire', icon: Zap, desc: 'Maximum Effort', color: 'bg-amber-100 text-amber-700' }
+                                    ].map((m) => (
+                                        <button
+                                            key={m.id}
+                                            onClick={() => startChat(m.id as Mood)}
+                                            className="flex flex-col items-center p-6 rounded-2xl border-2 border-[#D7C4A1] bg-white hover:border-amber-500 hover:shadow-xl transition-all group gap-4"
+                                        >
+                                            <div className={`p-4 rounded-full ${m.color} group-hover:scale-110 transition-transform`}>
+                                                <m.icon size={32} />
+                                            </div>
+                                            <div className="text-center">
+                                                <h4 className="font-bold text-[#2C1810] text-lg">{m.label}</h4>
+                                                <p className="text-xs text-[#8D6E63] mt-1 uppercase tracking-wide">{m.desc}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <div className="space-y-6">
+                                {messages.map((msg) => (
+                                    <motion.div
+                                        key={msg.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-[#5D4037] text-[#EDE0C8]' : 'bg-[#D4AF37] text-[#2C1810]'}`}>
+                                            {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                                        </div>
+
+                                        <div className={`max-w-[80%] space-y-4`}>
+                                            <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
+                                                    ? 'bg-[#5D4037] text-[#EDE0C8] rounded-tr-none'
+                                                    : 'bg-white border border-[#D7C4A1] text-[#2C1810] rounded-tl-none'
+                                                }`}>
+                                                {msg.content}
+                                            </div>
+
+                                            {/* Schedule Proposal Card */}
+                                            {msg.scheduleProposal && (
+                                                <div className="bg-white rounded-xl border-2 border-[#D4AF37] overflow-hidden shadow-md">
+                                                    <div className="bg-[#FFF8E1] p-3 border-b border-[#D7C4A1] flex justify-between items-center">
+                                                        <span className="text-xs font-bold text-[#8D6E63] uppercase tracking-widest flex items-center gap-2">
+                                                            <Scroll size={14} /> Proposed Schedule
+                                                        </span>
+                                                    </div>
+                                                    <div className="divide-y divide-[#F0E6D2]">
+                                                        {msg.scheduleProposal.schedule.map((item, idx) => (
+                                                            <div key={idx} className="p-3 flex items-center gap-4 hover:bg-[#FAFAFA]">
+                                                                <span className="flex-shrink-0 w-16 text-xs font-bold text-[#D4AF37] bg-[#2C1810] px-2 py-1 rounded text-center">
+                                                                    {item.time}
+                                                                </span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-bold text-[#5D4037] truncate">{item.activity}</p>
+                                                                    {item.details && <p className="text-xs text-[#8D6E63] truncate">{item.details}</p>}
+                                                                </div>
+                                                                <div>{getIcon(item.type)}</div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                                {isLoading && (
+                                    <div className="flex items-center gap-2 text-[#8D6E63] text-sm animate-pulse ml-12">
+                                        <Sparkles size={16} /> Elder Ignis is thinking...
                                     </div>
-                                </div>
-
-                                <div className="pt-4 flex gap-3 sticky bottom-0 bg-[#FDF6E3] pb-2 border-t border-[#D7C4A1]/50">
-                                    <button onClick={() => setStep('MOOD')} className="flex-1 py-3 border-2 border-[#2C1810] text-[#2C1810] font-medieval rounded-lg hover:bg-amber-50 transition text-sm">
-                                        Recalculate
-                                    </button>
-                                    <button onClick={acceptSchedule} className="flex-[2] py-3 bg-[#2C1810] text-[#D4AF37] font-medieval rounded-lg hover:bg-black transition shadow-lg flex items-center justify-center gap-2 text-sm">
-                                        <Sparkles size={18} />
-                                        Accept Plan
-                                    </button>
-                                </div>
-                            </motion.div>
+                                )}
+                                <div ref={messagesEndRef} />
+                            </div>
                         )}
                     </AnimatePresence>
                 </div>
+
+                {/* Input Area (Only in Chat) */}
+                {step === 'CHAT' && (
+                    <div className="p-4 bg-white border-t border-[#D7C4A1] flex gap-2 items-end">
+                        <div className="flex-1 relative">
+                            <textarea
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                                placeholder="Suggest a change (e.g., 'Move reading to 5 PM', 'I need a nap')..."
+                                className="w-full bg-[#FDF6E3] border border-[#D7C4A1] rounded-xl p-3 pr-10 text-sm focus:outline-none focus:border-amber-500 text-[#2C1810] placeholder-[#BCAAA4] resize-none custom-scrollbar"
+                                rows={1}
+                                style={{ minHeight: '44px', maxHeight: '120px' }}
+                            />
+                        </div>
+                        <button
+                            onClick={handleSendMessage}
+                            disabled={isLoading || !inputValue.trim()}
+                            className="p-3 bg-[#2C1810] text-[#D4AF37] rounded-xl hover:bg-black disabled:opacity-50 transition-colors"
+                        >
+                            <Send size={20} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Accept Button (Overlay or Toolbar) */}
+                {step === 'CHAT' && currentSchedule && !isLoading && (
+                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 w-auto">
+                        <motion.button
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            onClick={acceptSchedule}
+                            className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white font-medieval text-lg rounded-full shadow-[0_4px_14px_rgba(217,119,6,0.5)] hover:shadow-xl hover:scale-105 transition-all border-2 border-white/20"
+                        >
+                            <Sparkles size={18} className="fill-current" />
+                            Seal the Pact
+                        </motion.button>
+                    </div>
+                )}
             </motion.div>
         </motion.div>
     );

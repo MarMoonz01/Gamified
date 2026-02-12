@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDragonStore } from '../logic/dragonStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Book, Plus, Search, Check, X, Feather } from 'lucide-react';
+import { Book, Plus, Search, Check, X, Feather, Clock } from 'lucide-react';
 import Parchment from '../components/ui/Parchment';
 
 const Grimoire: React.FC = () => {
@@ -19,9 +19,16 @@ const Grimoire: React.FC = () => {
     const [feedback, setFeedback] = useState<'NONE' | 'CORRECT' | 'WRONG'>('NONE');
 
     // Filter
-    const [filter, setFilter] = useState('');
+    const [filterText, setFilterText] = useState('');
+    const [srsFilter, setSrsFilter] = useState<'ALL' | 'DUE'>('ALL');
 
-    const filteredList = vocabList.filter(v => v.word.toLowerCase().includes(filter.toLowerCase()) || v.meaning.toLowerCase().includes(filter.toLowerCase()));
+    const dueWords = vocabList.filter(w => w.nextReviewDate <= Date.now());
+
+    const filteredList = vocabList.filter(v => {
+        const matchesText = v.word.toLowerCase().includes(filterText.toLowerCase()) || v.meaning.toLowerCase().includes(filterText.toLowerCase());
+        const matchesSRS = srsFilter === 'ALL' || (srsFilter === 'DUE' && v.nextReviewDate <= Date.now());
+        return matchesText && matchesSRS;
+    });
 
     const handleAdd = () => {
         if (!newWord || !newMeaning) return;
@@ -62,6 +69,14 @@ const Grimoire: React.FC = () => {
                 </div>
                 <div className="flex gap-4">
                     <button
+                        onClick={() => setSrsFilter(srsFilter === 'ALL' ? 'DUE' : 'ALL')}
+                        className={`px-4 py-2 rounded font-bold transition flex items-center gap-2 ${srsFilter === 'DUE' ? 'bg-red-800 text-white shadow-lg' : 'bg-fantasy-wood/10 text-fantasy-wood-dark hover:bg-fantasy-wood/20'}`}
+                    >
+                        <Clock size={16} />
+                        {srsFilter === 'ALL' ? `REVIEW DUE (${dueWords.length})` : 'SHOW ALL'}
+                    </button>
+
+                    <button
                         onClick={() => setView('ADD')}
                         className="px-4 py-2 bg-fantasy-wood hover:bg-fantasy-wood-dark border border-fantasy-gold/30 rounded flex items-center gap-2 transition-colors text-fantasy-paper"
                     >
@@ -99,8 +114,8 @@ const Grimoire: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder="Search your lexicon..."
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
+                                value={filterText}
+                                onChange={(e) => setFilterText(e.target.value)}
                                 className="w-full pl-10 pr-4 py-3 bg-black/30 border-2 border-fantasy-wood/30 rounded-lg text-fantasy-paper focus:border-fantasy-gold/50 outline-none font-serif placeholder:italic"
                             />
                         </div>
@@ -115,7 +130,12 @@ const Grimoire: React.FC = () => {
                             ) : (
                                 filteredList.map(word => (
                                     <div key={word.id} className="relative group perspective">
-                                        <div className="bg-fantasy-paper border-2 border-fantasy-wood/20 p-4 rounded shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group-hover:border-fantasy-wood/50">
+                                        <div className={`bg-fantasy-paper border-2 p-4 rounded shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group-hover:border-fantasy-wood/50 ${word.nextReviewDate <= Date.now() ? 'border-red-400' : 'border-fantasy-wood/20'}`}>
+                                            {word.nextReviewDate <= Date.now() && (
+                                                <div className="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow animate-pulse z-10">
+                                                    DUE
+                                                </div>
+                                            )}
                                             {/* Mastery Indicator */}
                                             <div className="absolute top-2 right-2 flex gap-0.5">
                                                 {[...Array(5)].map((_, i) => (

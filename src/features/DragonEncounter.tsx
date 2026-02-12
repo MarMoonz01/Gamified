@@ -25,7 +25,7 @@ interface BossData {
 }
 
 const DragonEncounter: React.FC<DragonEncounterProps> = ({ isOpen, onClose, rarity }) => {
-    const { receiveBossEgg, consumeSummonCharge } = useDragonStore();
+    const { receiveBossEgg, consumeSummonCharge, submitExamResult } = useDragonStore();
     const { playSound } = useSound();
 
     // State
@@ -132,10 +132,15 @@ const DragonEncounter: React.FC<DragonEncounterProps> = ({ isOpen, onClose, rari
             Context: ${challenge?.text}
             User Answer: "${userAnswer}"
             
+            STRICT EXAMINER MODE:
+            - Grammar: Check for complex structures.
+            - Vocabulary: Check for uncommon lexical items.
+            - Task Achievement: Did they answer the question fully?
+
             Return JSON: {
-                isCorrect: boolean (true if Band 7.5+ quality),
-                feedback: "1 sentence critique",
-                damage: number (0-100, higher for better vocabulary/grammar)
+                isCorrect: boolean (true if Band 6.0+ quality),
+                feedback: "Specific feedback on grammar/vocab",
+                damage: number (Score 0-90, e.g., Band 7.0 = 70 damage)
             }`;
 
             const result = await geminiService.generateJSON<{ isCorrect: boolean, feedback: string, damage: number }>(prompt);
@@ -146,6 +151,14 @@ const DragonEncounter: React.FC<DragonEncounterProps> = ({ isOpen, onClose, rari
                 setFeedback(`CRITICAL HIT! ${result.feedback}`);
                 setDamageLog(prev => [...prev, `Dealt ${dmg} DMG: ${result.feedback}`]);
                 playSound('ATTACK_HIT');
+
+                // Submit Score to Radar Chart
+                // Approximate conversion: Damage 50 = Band 5.0, Damage 90 = Band 9.0
+                const bandScore = Math.min(9, Math.max(0, result.damage / 10)); // simple mapping
+
+                if (phase === 'READING_SHIELD') submitExamResult('READING', bandScore);
+                else if (phase === 'WRITING_BEAM') submitExamResult('WRITING', bandScore);
+                else if (phase === 'SPEAKING_ULTI') submitExamResult('SPEAKING', bandScore);
 
                 // Next Phase Logic
                 setTimeout(() => {

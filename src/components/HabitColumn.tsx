@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { Plus, Scroll } from 'lucide-react';
 import { useDragonStore } from '../logic/dragonStore';
-import { useAgentStore } from '../logic/agentStore';
+
 import HabitItem from './HabitItem';
 import PresetSelector from './PresetSelector';
 import Parchment from './ui/Parchment';
 
 const HabitColumn: React.FC = () => {
     const { habits, addHabit } = useDragonStore();
-    const { triggerMessage } = useAgentStore();
+
     const [showPresets, setShowPresets] = useState(false);
 
     const handleSelect = (label: string) => {
         addHabit(label, 'BOTH');
-        triggerMessage('IRON', 'TASK_COMPLETE');
+
     };
 
     return (

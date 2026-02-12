@@ -29,6 +29,9 @@ export interface DaySummary {
     heat_earned: number;
     mood: string;
     ai_analysis?: string;
+    score: number; // 0-100 (Success Score)
+    recommendation_next_day: string; // Message for tomorrow
+    blockers?: string[];
 }
 
 export interface Dragon {
@@ -129,6 +132,21 @@ export interface Daily {
     type: 'HEALTH' | 'STUDY' | 'SOCIAL' | 'GOLD';
 }
 
+export interface ScheduleItem {
+    id: string;
+    time: string; // "08:00"
+    activity: string;
+    type: 'STUDY' | 'HEALTH' | 'SOCIAL' | 'GOLD';
+    completed: boolean;
+}
+
+export interface ExamRecord {
+    id: string;
+    date: string;
+    scores: IELTSProgress;
+    notes?: string;
+}
+
 interface DragonState {
     // Resources
     essence: number;
@@ -149,7 +167,11 @@ interface DragonState {
 
     // IELTS Progress
     ielts: IELTSProgress;
+    ieltsHistory: { date: string, scores: IELTSProgress }[];
+    examRecords: ExamRecord[]; // Detailed full mock history
     updateIELTS: (scores: Partial<IELTSProgress>) => void;
+    submitExamResult: (type: 'READING' | 'LISTENING' | 'WRITING' | 'SPEAKING', score: number) => void;
+    saveExamRecord: (scores: IELTSProgress, notes?: string) => void;
 
     // Entities
     dragons: Dragon[];
@@ -162,9 +184,13 @@ interface DragonState {
     dragonInk: number;
     collectedCards: OracleCard[];
 
-    // User Profile & History
     userProfile: UserProfile | null;
     dailyHistory: DaySummary[];
+    schedule: ScheduleItem[];
+    generateSchedule: () => void;
+    updateSchedule: (newSchedule: ScheduleItem[]) => void;
+    rescheduleDay: () => void;
+    toggleScheduleItem: (id: string) => void;
 
     // Core Actions
     addHeat: (amount: number, source: string) => void;
@@ -247,6 +273,9 @@ export interface VocabWord {
     example?: string;
     mastery: number; // 0 (New) -> 5 (Mastered)
     lastPracticed: number;
+    nextReviewDate: number; // Timestamp for SRS
+    interval: number; // In days
+    easeFactor: number; // Default 2.5
 }
 
 export const useDragonStore = create<DragonState>()(
@@ -324,12 +353,14 @@ export const useDragonStore = create<DragonState>()(
 
             // IELTS
             ielts: {
-                reading: 0.0,
-                listening: 0.0,
-                writing: 0.0,
-                speaking: 0.0,
-                overall: 0.0
+                reading: 5.0,
+                listening: 5.0,
+                writing: 5.0,
+                speaking: 5.0,
+                overall: 5.0
             },
+            ieltsHistory: [],
+            examRecords: [],
             updateIELTS: (scores) => set(prev => {
                 const newScores = { ...prev.ielts, ...scores };
                 const overall = ((newScores.reading + newScores.listening + newScores.writing + newScores.speaking) / 4);
@@ -338,6 +369,36 @@ export const useDragonStore = create<DragonState>()(
                 return { ielts: { ...newScores, overall: roundedOverall } };
             }),
 
+            submitExamResult: (type, newScore) => set((state) => {
+                const key = type.toLowerCase() as keyof IELTSProgress;
+                const currentScore = state.ielts[key];
+
+                // Weighted Moving Average: 70% Old, 30% New
+                const weight = 0.3;
+                const updatedScore = (currentScore * (1 - weight)) + (newScore * weight);
+
+                // Round to nearest 0.5
+                const roundedScore = Math.round(updatedScore * 2) / 2;
+
+                const newIelts = { ...state.ielts, [key]: roundedScore };
+
+                // Recalculate Overall
+                newIelts.overall = Math.round(((newIelts.reading + newIelts.listening + newIelts.writing + newIelts.speaking) / 4) * 2) / 2;
+
+                return {
+                    ielts: newIelts,
+                    ieltsHistory: [...state.ieltsHistory, { date: new Date().toISOString(), scores: newIelts }]
+                };
+            }),
+
+            saveExamRecord: (scores, notes) => set(state => ({
+                examRecords: [...state.examRecords, { id: uuidv4(), date: new Date().toISOString(), scores, notes }],
+                // Also update the main IELTS stats with the Full Mock result (giving it high weight? or just replace?)
+                // For now, let's treat full mocks as a calibration event -> Higher weight e.g. 50%
+                ielts: scores, // Direct calibration!
+                ieltsHistory: [...state.ieltsHistory, { date: new Date().toISOString(), scores }]
+            })),
+
             // Entities
             vocabList: [],
             dragonInk: 0,
@@ -345,6 +406,28 @@ export const useDragonStore = create<DragonState>()(
 
             userProfile: null,
             dailyHistory: [],
+            schedule: [],
+
+            generateSchedule: () => set({
+                // Placeholder generator logic - in real app would use AI
+                schedule: [
+                    { id: uuidv4(), time: '08:00', activity: 'Morning Review', type: 'STUDY', completed: false },
+                    { id: uuidv4(), time: '12:00', activity: 'Vocabulary Lunch', type: 'STUDY', completed: false },
+                    { id: uuidv4(), time: '18:00', activity: 'Evening Workout', type: 'HEALTH', completed: false },
+                    { id: uuidv4(), time: '20:00', activity: 'Writing Forge', type: 'STUDY', completed: false },
+                ]
+            }),
+
+            updateSchedule: (newSchedule) => set({ schedule: newSchedule }),
+
+            rescheduleDay: () => set(state => ({
+                // Panic Button: Reduce to essential
+                schedule: state.schedule.slice(0, 2).map(s => ({ ...s, activity: s.activity + ' (Short)' })) // Simple mock
+            })),
+
+            toggleScheduleItem: (id) => set(state => ({
+                schedule: state.schedule.map(s => s.id === id ? { ...s, completed: !s.completed } : s)
+            })),
 
             updateProfile: (profile) => set(prev => ({
                 userProfile: prev.userProfile ? { ...prev.userProfile, ...profile } : { name: 'Keeper', age: 25, weight: 60, height: 170, activityLevel: 'Moderately Active', gender: 'Not Specified', ...profile }
@@ -716,7 +799,10 @@ export const useDragonStore = create<DragonState>()(
                             meaning,
                             type,
                             mastery: 0,
-                            lastPracticed: Date.now()
+                            lastPracticed: Date.now(),
+                            nextReviewDate: Date.now(),
+                            interval: 0,
+                            easeFactor: 2.5
                         }
                     ],
                     essence: state.essence + 5 // Reward for adding knowledge
@@ -749,7 +835,10 @@ export const useDragonStore = create<DragonState>()(
                 newVocabList[wordIndex] = {
                     ...word,
                     mastery: newMastery,
-                    lastPracticed: Date.now()
+                    lastPracticed: Date.now(),
+                    nextReviewDate: Date.now() + (success ? (word.interval === 0 ? 1 : word.interval) * 24 * 60 * 60 * 1000 : 0), // Simple SRS calc placeholder
+                    interval: success ? (word.interval === 0 ? 1 : word.interval * 2) : 0, // Double interval
+                    easeFactor: word.easeFactor // constant for now
                 };
 
                 return {

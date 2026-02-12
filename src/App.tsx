@@ -3,7 +3,7 @@ import Landing from './features/Landing';
 import Sanctuary from './features/Sanctuary';
 import Hatchery from './features/Hatchery';
 import Codex from './features/Codex';
-import DragonLessons from './features/DragonLessons';
+// import DragonLessons from './features/DragonLessons'; // Deprecated
 import Grimoire from './features/Grimoire';
 import OracleDeck from './features/OracleDeck';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -14,6 +14,12 @@ import Dashboard from './features/Dashboard';
 import Analysis from './features/Analysis';
 import Achievements from './features/Achievements';
 import GuildShop from './features/GuildShop';
+import Academy from './features/Academy';
+import HallOfRecords from './features/HallOfRecords';
+import WritingDojo from './features/dojos/WritingDojo';
+import SpeakingDojo from './features/dojos/SpeakingDojo';
+import ReadingDojo from './features/dojos/ReadingDojo';
+import ListeningDojo from './features/dojos/ListeningDojo';
 
 import { useEffect, useRef } from 'react';
 import { useDragonStore } from './logic/dragonStore';
@@ -71,7 +77,13 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/hatchery" element={<Hatchery />} />
             <Route path="/codex" element={<Codex />} />
-            <Route path="/lessons" element={<DragonLessons />} />
+            <Route path="/academy" element={<Academy />} />
+            <Route path="/lessons" element={<Academy />} />
+            <Route path="/dojo/writing" element={<WritingDojo />} />
+            <Route path="/dojo/speaking" element={<SpeakingDojo />} />
+            <Route path="/dojo/reading" element={<ReadingDojo />} />
+            <Route path="/dojo/listening" element={<ListeningDojo />} />
+            <Route path="/hall-of-records" element={<HallOfRecords />} />
             <Route path="/grimoire" element={<Grimoire />} />
             <Route path="/oracle" element={<OracleDeck />} />
             <Route path="/analysis" element={<Analysis />} />
