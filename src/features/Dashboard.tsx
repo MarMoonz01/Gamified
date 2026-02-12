@@ -3,7 +3,7 @@ import { useDragonStore } from '../logic/dragonStore';
 import type { DaySummary } from '../logic/dragonStore';
 import {
     CheckCircle, Flame, Target, Trophy, Calendar, Moon, Sparkles,
-    Clock, AlertTriangle, ArrowRight
+    Clock, AlertTriangle, ArrowRight, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../logic/GeminiService';
@@ -14,7 +14,7 @@ const StatCard: React.FC<{
     label: string, value: string | number, icon: any, color: string, bg: string, subtext?: string
 }> = ({ label, value, icon: Icon, color, bg, subtext }) => (
     <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center justify-center gap-2 transition-transform hover:scale-105">
-        <div className={`p-4 rounded-2xl ${bg} ${color} mb-2`}>
+        <div className={`p - 4 rounded - 2xl ${bg} ${color} mb - 2`}>
             <Icon size={24} />
         </div>
         <div className="text-3xl font-bold text-slate-800">{value}</div>
@@ -77,6 +77,7 @@ const Dashboard: React.FC = () => {
         end.setHours(23, 59, 59, 999);
         const events = await calendarService.fetchEvents(start, end);
         setCalendarEvents(events);
+        return events;
     };
 
     const handleConnectCalendar = async () => {
@@ -90,6 +91,16 @@ const Dashboard: React.FC = () => {
     // Greeting based on time
     const hour = new Date().getHours();
     const greeting = hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
+
+    const syncCalendar = async () => {
+        try {
+            // Assuming listUpcomingEvents is meant to be fetchCalendarEvents based on existing code
+            const events = await fetchCalendarEvents();
+            if (events) setCalendarEvents(events);
+        } catch (error) {
+            console.error("Failed to sync calendar:", error);
+        }
+    };
 
     const handleEndDay = async () => {
         const hasIncomplete = tasks.some(t => !t.completed && (!t.expiresAt || t.expiresAt > Date.now()));
@@ -125,7 +136,7 @@ const Dashboard: React.FC = () => {
                 blockers: blockers
             };
             recordDaySummary(summary);
-            alert(`Analysis Complete. Score: ${result.score}`);
+            alert(`Analysis Complete.Score: ${result.score} `);
         }
         setIsAnalyzing(false);
     };
@@ -168,7 +179,7 @@ const Dashboard: React.FC = () => {
             details: ''
         })),
         ...schedule.map((s, i) => ({
-            id: `sched-${i}`,
+            id: `sched - ${i} `,
             time: s.time,
             title: s.activity,
             type: s.type,
@@ -191,11 +202,20 @@ const Dashboard: React.FC = () => {
                             👋
                         </motion.span>
                     </h1>
-                    <p className="text-slate-500 font-medium mt-1 ml-1 flex items-center gap-2">
+                    <p className="text-slate-500 font-medium mt-1 ml-1 flex items-center gap-3">
                         {isCalendarConnected ? (
-                            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
-                                <CheckCircle size={12} /> Calendar Synced
-                            </span>
+                            <>
+                                <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                                    <CheckCircle size={12} /> Synced
+                                </span>
+                                <button
+                                    onClick={syncCalendar}
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors"
+                                    title="Sync Calendar"
+                                >
+                                    <RefreshCw size={14} />
+                                </button>
+                            </>
                         ) : (
                             <button onClick={handleConnectCalendar} className="text-indigo-600 hover:underline text-xs font-bold flex items-center gap-1">
                                 <Calendar size={12} /> Connect Google Calendar
@@ -287,7 +307,7 @@ const Dashboard: React.FC = () => {
                                         <div className="flex-1 pb-4">
                                             <div className={clsx(
                                                 "p-4 rounded-2xl border transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer relative overflow-hidden",
-                                                item.type === 'CALENDAR' ? 'bg-blue-50 border-blue-100 text-blue-900' :
+                                                item.type === 'CALENDAR' ? 'bg-slate-50 border-slate-300 text-slate-500' :
                                                     item.type === 'MEAL' ? 'bg-orange-50 border-orange-100 text-orange-900' :
                                                         item.type === 'WORK' ? 'bg-amber-50 border-amber-100 text-amber-900' :
                                                             'bg-white border-slate-100 text-slate-800'
@@ -472,7 +492,7 @@ const Dashboard: React.FC = () => {
                                     <button
                                         key={b}
                                         onClick={() => setBlockerInput(b)}
-                                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${blockerInput === b ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-indigo-300'}`}
+                                        className={`px - 3 py - 1 rounded - full text - xs font - bold border transition - colors ${blockerInput === b ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-indigo-300'} `}
                                     >
                                         {b}
                                     </button>

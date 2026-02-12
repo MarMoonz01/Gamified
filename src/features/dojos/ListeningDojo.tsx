@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Pause, FastForward, Rewind, FileText } from 'lucide-react';
+import { Play, Pause, FastForward, Rewind, FileText, ArrowLeft, Headphones } from 'lucide-react';
 
-const ListeningDojo: React.FC = () => {
+interface ListeningDojoProps {
+    onBack: () => void;
+}
+
+const ListeningDojo: React.FC<ListeningDojoProps> = ({ onBack }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [speed, setSpeed] = useState(1.0);
     const [notes, setNotes] = useState('');
@@ -15,7 +19,7 @@ const ListeningDojo: React.FC = () => {
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs.toString().padStart(2, '0')} `;
     };
 
     return (
@@ -26,11 +30,15 @@ const ListeningDojo: React.FC = () => {
 
             {/* Audio Player Card */}
             <div className="bg-sky-900 text-white p-6 rounded-xl shadow-lg border border-sky-400/30">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="text-sky-200 text-xs font-bold uppercase tracking-widest">
-                        Cambridge IELTS 18 - Test 1 - Part 1
-                    </div>
-                    <div className="bg-black/30 px-3 py-1 rounded text-xs font-mono">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-8 border-b border-indigo-500/30 pb-4">
+                    <h1 className="text-3xl font-bold text-indigo-100 flex items-center gap-3 font-mono">
+                        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors text-indigo-400">
+                            <ArrowLeft size={24} />
+                        </button>
+                        <Headphones size={32} className="text-indigo-400" />
+                        SIGNAL INTERCEPTOR
+                    </h1>    <div className="bg-black/30 px-3 py-1 rounded text-xs font-mono">
                         {speed}x Speed
                     </div>
                 </div>
@@ -57,9 +65,9 @@ const ListeningDojo: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-4 mt-6">
-                    <button onClick={() => setSpeed(1.0)} className={`px-3 py-1 rounded border border-sky-500/50 ${speed === 1.0 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'}`}>1.0x</button>
-                    <button onClick={() => setSpeed(1.25)} className={`px-3 py-1 rounded border border-sky-500/50 ${speed === 1.25 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'}`}>1.25x</button>
-                    <button onClick={() => setSpeed(1.5)} className={`px-3 py-1 rounded border border-sky-500/50 ${speed === 1.5 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'}`}>1.5x</button>
+                    <button onClick={() => setSpeed(1.0)} className={`px - 3 py - 1 rounded border border - sky - 500 / 50 ${speed === 1.0 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'} `}>1.0x</button>
+                    <button onClick={() => setSpeed(1.25)} className={`px - 3 py - 1 rounded border border - sky - 500 / 50 ${speed === 1.25 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'} `}>1.25x</button>
+                    <button onClick={() => setSpeed(1.5)} className={`px - 3 py - 1 rounded border border - sky - 500 / 50 ${speed === 1.5 ? 'bg-sky-500 text-white' : 'text-sky-300 hover:bg-sky-800'} `}>1.5x</button>
                 </div>
             </div>
 

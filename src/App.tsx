@@ -15,7 +15,7 @@ import Analysis from './features/Analysis';
 import Achievements from './features/Achievements';
 import GuildShop from './features/GuildShop';
 import Academy from './features/Academy';
-import HallOfRecords from './features/HallOfRecords';
+import HallOfRecords from './features/HallOfRecordsComponent'; // Import updated
 import WritingDojo from './features/dojos/WritingDojo';
 import SpeakingDojo from './features/dojos/SpeakingDojo';
 import ReadingDojo from './features/dojos/ReadingDojo';
@@ -88,10 +88,10 @@ function App() {
             <Route path="/codex" element={<Codex />} />
             <Route path="/academy" element={<Academy />} />
             <Route path="/lessons" element={<Academy />} />
-            <Route path="/dojo/writing" element={<WritingDojo />} />
-            <Route path="/dojo/speaking" element={<SpeakingDojo />} />
-            <Route path="/dojo/reading" element={<ReadingDojo />} />
-            <Route path="/dojo/listening" element={<ListeningDojo />} />
+            <Route path="/dojo/writing" element={<WritingDojo onBack={() => window.location.href = '/lessons'} />} />
+            <Route path="/dojo/speaking" element={<SpeakingDojo onBack={() => window.location.href = '/lessons'} />} />
+            <Route path="/dojo/reading" element={<ReadingDojo onBack={() => window.location.href = '/lessons'} />} />
+            <Route path="/dojo/listening" element={<ListeningDojo onBack={() => window.location.href = '/lessons'} />} />
             <Route path="/hall-of-records" element={<HallOfRecords />} />
             <Route path="/grimoire" element={<Grimoire />} />
             <Route path="/oracle" element={<OracleDeck />} />

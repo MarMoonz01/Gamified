@@ -6,7 +6,14 @@ import { PenTool, Clock, CheckCircle, Flame, Sword, RefreshCw } from 'lucide-rea
 import { useSound } from '../../logic/soundStore';
 import Parchment from '../../components/ui/Parchment';
 
-const WritingDojo: React.FC = () => {
+/* ... imports ... */
+import { ArrowLeft } from 'lucide-react'; // Add icon
+
+interface WritingDojoProps {
+    onBack: () => void;
+}
+
+const WritingDojo: React.FC<WritingDojoProps> = ({ onBack }) => {
     const { playSound } = useSound();
     const { gainXp, addSummonCharge, submitExamResult } = useDragonStore();
 
@@ -102,6 +109,9 @@ const WritingDojo: React.FC = () => {
             {/* Header / Toolbar */}
             <div className="flex justify-between items-center bg-fantasy-paper-dark p-4 rounded-lg border-2 border-fantasy-wood/30 shadow-md">
                 <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-2 hover:bg-black/10 rounded-full transition-colors text-fantasy-wood-dark">
+                        <ArrowLeft size={24} />
+                    </button>
                     <div className="p-3 bg-red-900 text-red-100 rounded-lg">
                         <Flame size={24} />
                     </div>

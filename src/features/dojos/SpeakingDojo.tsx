@@ -5,7 +5,13 @@ import { motion } from 'framer-motion';
 import { Mic, AlertTriangle, RefreshCw, Square } from 'lucide-react';
 import { useSound } from '../../logic/soundStore';
 
-const SpeakingDojo: React.FC = () => {
+import { ArrowLeft } from 'lucide-react';
+
+interface SpeakingDojoProps {
+    onBack: () => void;
+}
+
+const SpeakingDojo: React.FC<SpeakingDojoProps> = ({ onBack }) => {
     const { playSound } = useSound();
     const { gainXp, addSummonCharge, submitExamResult } = useDragonStore();
 
@@ -130,6 +136,9 @@ const SpeakingDojo: React.FC = () => {
             </div>
 
             <h1 className="text-4xl font-medieval text-amber-500 mb-8 relative z-10 flex items-center gap-3">
+                <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors text-amber-500">
+                    <ArrowLeft size={32} />
+                </button>
                 <Mic size={40} /> The Echo Chamber
             </h1>
 

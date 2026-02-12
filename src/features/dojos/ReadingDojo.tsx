@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { BookOpen, Highlighter } from 'lucide-react';
+import { BookOpen, Highlighter, ArrowLeft } from 'lucide-react'; // Add ArrowLeft
 
-const ReadingDojo: React.FC = () => {
+interface ReadingDojoProps {
+    onBack: () => void;
+}
+
+const ReadingDojo: React.FC<ReadingDojoProps> = ({ onBack }) => {
     const [highlightMode, setHighlightMode] = useState(false);
     const [selectedText, setSelectedText] = useState<string[]>([]);
 
@@ -38,17 +42,21 @@ const ReadingDojo: React.FC = () => {
         <div className="w-full h-full p-4 flex gap-4 max-w-7xl mx-auto">
             {/* Left: Passage */}
             <div className="flex-1 h-full flex flex-col">
-                <div className="bg-fantasy-paper-dark p-3 rounded-t-lg flex justify-between items-center">
-                    <h2 className="font-medieval text-fantasy-wood-dark flex items-center gap-2">
-                        <BookOpen size={20} /> The Scroll
-                    </h2>
-                    <button
+                {/* Header */}
+                <header className="flex justify-between items-center mb-8 border-b-2 border-[#D4AF37] pb-4">
+                    <h1 className="text-4xl font-medieval text-[#2C1810] flex items-center gap-3">
+                        <button onClick={onBack} className="p-2 hover:bg-black/10 rounded-full transition-colors">
+                            <ArrowLeft size={32} />
+                        </button>
+                        <BookOpen size={40} className="text-[#D4AF37]" />
+                        The Grand Library
+                    </h1>    <button
                         onClick={() => setHighlightMode(!highlightMode)}
-                        className={`p-2 rounded ${highlightMode ? 'bg-yellow-400 text-black shadow-lg' : 'bg-fantasy-wood/10 text-fantasy-wood-dark'}`}
+                        className={`p - 2 rounded ${highlightMode ? 'bg-yellow-400 text-black shadow-lg' : 'bg-fantasy-wood/10 text-fantasy-wood-dark'} `}
                     >
                         <Highlighter size={16} /> {highlightMode ? 'HIGHLIGHTER ON' : 'HIGHLIGHT'}
                     </button>
-                </div>
+                </header>
                 <div
                     className="flex-1 bg-fantasy-paper p-8 overflow-y-auto font-serif text-lg leading-loose text-fantasy-wood-dark shadow-inner text-justify"
                     onMouseUp={handleTextSelection}
@@ -72,7 +80,7 @@ const ReadingDojo: React.FC = () => {
                                     <label key={idx} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-black/5 rounded">
                                         <input
                                             type="radio"
-                                            name={`q-${q.id}`}
+                                            name={`q - ${q.id} `}
                                             checked={answers[q.id] === idx}
                                             onChange={() => setAnswers({ ...answers, [q.id]: idx })}
                                             className="accent-fantasy-gold w-4 h-4"
