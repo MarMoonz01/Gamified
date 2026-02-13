@@ -16,6 +16,7 @@ const SpeakingDojo: React.FC<SpeakingDojoProps> = ({ onBack }) => {
     const { gainXp, submitExamResult } = useDragonStore();
 
     // Exam State
+    const [hasStarted, setHasStarted] = useState(false);
     const [stage, setStage] = useState<ExamStage>('INTRO');
     const [examinerText, setExaminerText] = useState("Good afternoon. I am your examiner today. Can you tell me your full name?");
     const [cueCardTopic, setCueCardTopic] = useState("");
@@ -29,13 +30,14 @@ const SpeakingDojo: React.FC<SpeakingDojoProps> = ({ onBack }) => {
     const [timeLeft, setTimeLeft] = useState(0);
     const [volume, setVolume] = useState(0);
     const recognitionRef = useRef<any>(null);
-    // const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-    // Initial Start
+    // Initial Start - Wait for user interaction
     useEffect(() => {
-        speak(examinerText);
-        setFullTranscript([{ role: 'EXAMINER', text: examinerText }]);
-    }, []);
+        if (hasStarted) {
+            speak(examinerText);
+            setFullTranscript([{ role: 'EXAMINER', text: examinerText }]);
+        }
+    }, [hasStarted]);
 
     // Timer Logic
     useEffect(() => {
@@ -178,6 +180,38 @@ const SpeakingDojo: React.FC<SpeakingDojoProps> = ({ onBack }) => {
             setExaminerText("Analysis failed.");
         }
     };
+
+    if (!hasStarted) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-100 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=2560')] bg-cover bg-center opacity-20" />
+                <div className="relative z-10 text-center space-y-8 p-12 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-amber-500/30 shadow-2xl max-w-lg">
+                    <Mic size={64} className="mx-auto text-amber-500 animate-pulse" />
+                    <div>
+                        <h1 className="text-4xl font-medieval text-amber-500 mb-2">The Echo Chamber</h1>
+                        <p className="text-slate-300 font-serif">IELTS Speaking Simulation</p>
+                    </div>
+                    <div className="text-left space-y-3 text-sm text-slate-400 bg-black/40 p-6 rounded-lg">
+                        <p>• Ensure your microphone is ready.</p>
+                        <p>• Speak clearly and naturally.</p>
+                        <p>• The Examiner (AI) will guide you through Parts 1, 2, and 3.</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setHasStarted(true);
+                            playSound('CLICK');
+                        }}
+                        className="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow-lg hover:shadow-amber-500/20 transition-all transform hover:scale-105"
+                    >
+                        BEGIN EXAMINATION
+                    </button>
+                    <button onClick={onBack} className="text-slate-500 text-sm hover:text-slate-300">
+                        Return to Academy
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full h-full p-8 flex flex-col relative overflow-hidden bg-slate-900 text-slate-100">

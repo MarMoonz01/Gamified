@@ -76,6 +76,18 @@ const HallOfRecords: React.FC = () => {
         return () => clearInterval(interval);
     }, [examState, timeLeft]);
 
+    // Prevent Accidental Refresh / Exit
+    React.useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (examState === 'IN_PROGRESS' || examState === 'CUSTOM_SIM') {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [examState]);
+
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;

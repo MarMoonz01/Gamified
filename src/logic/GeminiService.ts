@@ -92,8 +92,11 @@ class GeminiService {
                 const result = await model.generateContent(prompt + " Response must be valid JSON only. Do not wrap in markdown blocks.");
                 const response = await result.response;
                 const text = response.text();
-                // Clean markdown if present
-                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+                // Robust JSON Extraction (Regex)
+                const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+                const jsonStr = jsonMatch ? jsonMatch[0] : text.replace(/```json|```/g, '').trim();
+
                 return JSON.parse(jsonStr) as T;
             });
         } catch (error) {

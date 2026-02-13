@@ -144,10 +144,11 @@ const ExamSimulator: React.FC<ExamSimulatorProps> = ({ file, mode, onFinish, onB
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                         {mode === 'WRITING' ? (
                             <textarea
+                                disabled={timeLeft === 0}
                                 value={writingText}
                                 onChange={(e) => setWritingText(e.target.value)}
                                 placeholder="Start writing your essay here..."
-                                className="w-full h-full min-h-[500px] p-6 bg-white border border-slate-200 rounded-xl shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500 font-serif text-lg leading-relaxed text-slate-800 resize-none"
+                                className="w-full h-full min-h-[500px] p-6 bg-white border border-slate-200 rounded-xl shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500 font-serif text-lg leading-relaxed text-slate-800 resize-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                             />
                         ) : (
                             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
@@ -156,13 +157,14 @@ const ExamSimulator: React.FC<ExamSimulatorProps> = ({ file, mode, onFinish, onB
                                         <label className="w-8 text-right font-bold text-slate-400">{i + 1}.</label>
                                         <input
                                             type="text"
+                                            disabled={timeLeft === 0}
                                             value={mcqAnswers[i]}
                                             onChange={(e) => {
                                                 const newAns = [...mcqAnswers];
                                                 newAns[i] = e.target.value;
                                                 setMcqAnswers(newAns);
                                             }}
-                                            className="flex-1 p-2 border border-slate-300 rounded focus:outline-none focus:border-indigo-500 text-slate-800 font-mono"
+                                            className="flex-1 p-2 border border-slate-300 rounded focus:outline-none focus:border-indigo-500 text-slate-800 font-mono disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 ))}
